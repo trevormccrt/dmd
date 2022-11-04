@@ -49,25 +49,25 @@ encoder_losses = []
 decoder_losses = []
 for _ in range(n_epochs):
     # sample input phases
-    angles_numpy = np.random.uniform(-np.pi, np.pi, (batch_size, n_points_compare))
+    phases_numpy = np.random.uniform(-np.pi, np.pi, (batch_size, n_points_compare))
 
     # sample in-between input phases for integration
-    angles_span = generative_isometry_util.densely_sample_angles(angles_numpy, n_resample)
+    phases_span = generative_isometry_util.densely_sample_angles(phases_numpy, n_resample)
 
     # map phases to a ring in 2D (better for input to NN)
-    mapped_init_angles = torch.tensor(generative_isometry_util.angles_to_ring(angles_numpy), dtype=torch.get_default_dtype())
-    mapped_span = torch.tensor(generative_isometry_util.angles_to_ring(angles_span), dtype=torch.get_default_dtype())
+    mapped_init_angles = torch.tensor(generative_isometry_util.angles_to_ring(phases_numpy), dtype=torch.get_default_dtype())
+    mapped_span = torch.tensor(generative_isometry_util.angles_to_ring(phases_span), dtype=torch.get_default_dtype())
 
     # input tensor and true distance on the ring
-    angle_batch = torch.tensor(angles_span, dtype=torch.get_default_dtype())
-    angle_metric = torch.tensor(generative_isometry_util.integrated_angle_metric(angles_numpy), dtype=torch.get_default_dtype())
-    scaled_angle_metric = angle_metric/torch.mean(angle_metric)
+    phase_batch = torch.tensor(phases_span, dtype=torch.get_default_dtype())
+    phase_metric = torch.tensor(generative_isometry_util.integrated_angle_metric(phases_numpy), dtype=torch.get_default_dtype())
+    scaled_phase_metric = phase_metric/torch.mean(phase_metric)
 
     opt.zero_grad()
 
     #forward through the encoder
     encoded_points = encoder_net.forward(torch.reshape(mapped_span, [-1, mapped_span.size(-1)]))
-    encoded_points_reshaped = torch.reshape(encoded_points, [*angle_batch.size(), -1])
+    encoded_points_reshaped = torch.reshape(encoded_points, [*phase_batch.size(), -1])
 
     # calculate distance between encoded points
     encoded_distances = generative_isometry_util.integrated_point_metric(encoded_points_reshaped)
@@ -80,7 +80,7 @@ for _ in range(n_epochs):
     decoded_points_reshaped = torch.reshape(decoded_points, mapped_init_angles.size())
 
     # calculate loss as sum of error in distance and error in decoding
-    loss_encoding = torch.sum(torch.square(scaled_encoded_distances - scaled_angle_metric))
+    loss_encoding = torch.sum(torch.square(scaled_encoded_distances - scaled_phase_metric))
     loss_decoding = torch.sum(torch.square(decoded_points_reshaped - mapped_init_angles))
     loss = loss_encoding + loss_decoding
     encoder_losses.append(loss_encoding.detach().numpy())
