@@ -56,6 +56,8 @@ def test_vs_scipy():
 
 
 def test_origin_destabilization():
+    # the origin should be stable until the absolute value of the hopfield net weight is larger than 1
+    # an optimizer should be able to figure this out and destabilize the system
     system = torch_hopfield.SymmetricHopfield(2, torch.from_numpy(np.array([0.5])), autapses=False, nonlin=torch.tanh)
     eq_time = 5.0
     batch_dim = 20
@@ -65,6 +67,7 @@ def test_origin_destabilization():
         opt.zero_grad()
         init_states = np.random.uniform(-0.1, 0.1, (batch_dim, 2))
         final_states = odeint(system, torch.from_numpy(init_states), torch.tensor([0, eq_time]))[1, :, :]
+        # if you get further from the origin the loss goes down
         loss = -torch.sum(torch.square(final_states))
         loss.backward()
         opt.step()
