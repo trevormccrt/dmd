@@ -50,6 +50,17 @@ def resample_points_ring(points, n_samples):
     return angles, points
 
 
+def randomly_resample_points_ring(points, n_samples):
+    angles = torch.atan2(points[:, :, 1], points[:, :, 0])
+    rand_mask = torch.randint(0, 2, angles.shape) * 2 * np.pi
+    angles_remap = torch.remainder(angles, 2 * np.pi) - rand_mask.to(angles.device)
+    rolled_angles = torch.roll(angles_remap, 1, dims=-1)
+    angle_distances = torch.abs(angles_remap - rolled_angles)
+    sampled_angles = torch.transpose(torch.transpose(torch_linspace(angles_remap, rolled_angles, n_samples), 0, 2), 0, 1)
+    new_points = torch_angles_to_ring(sampled_angles)
+    return angles, new_points, angle_distances
+
+
 class CircleDistance(torch.nn.Module):
     def __init__(self, init_shift=torch.from_numpy(np.array([0.0, 0.0])), init_rad=torch.from_numpy(np.array([1.0]))):
         super().__init__()

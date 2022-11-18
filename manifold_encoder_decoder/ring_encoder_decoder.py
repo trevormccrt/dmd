@@ -48,7 +48,7 @@ opt = torch.optim.Adam(params)
 
 batch_size = 20
 n_points_compare = 4 # how many points on the ring to compare distances between
-n_epochs = 100
+n_epochs = 1000
 
 encoder_losses = []
 decoder_losses = []
