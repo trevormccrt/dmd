@@ -87,7 +87,7 @@ for _ in range(n_epochs):
 
 
 
-    encoded_angles, resampled_encoded_points, angular_distance = generative_isometry_util.resample_points_ring(normed_encoded, n_resample)
+    encoded_angles, resampled_encoded_points, angular_distance = generative_isometry_util.randomly_resample_points_ring(normed_encoded, n_resample)
     normed_angular_distance = angular_distance/torch.mean(angular_distance)
     decoded_resample = decoder_net(resampled_encoded_points)
     decoder_distance = generative_isometry_util.integrated_point_metric(decoded_resample)
@@ -128,7 +128,7 @@ with torch.no_grad():
     encoded = best_encoder(torch.tensor(data, dtype=torch.get_default_dtype()).to(device))
     r_encoded = torch.sqrt(torch.sum(torch.square(encoded), dim=-1))
     normed_encoded = torch.einsum("...k, ...kj -> ...kj", 1 / r_encoded, encoded)
-    encoded_angles, resampled_encoded_points, encoded_distance = generative_isometry_util.resample_points_ring(torch.unsqueeze(normed_encoded, 0), n_resample)
+    encoded_angles, resampled_encoded_points, encoded_distance = generative_isometry_util.randomly_resample_points_ring(torch.unsqueeze(normed_encoded, 0), n_resample)
     normed_angular_distance = encoded_distance / torch.mean(encoded_distance)
     decoded = best_decoder(resampled_encoded_points)
     decoded_distances = generative_isometry_util.integrated_point_metric(decoded)

@@ -45,6 +45,13 @@ def torch_linspace(start, stop, num: int):
 
 def resample_points_ring(points, n_samples):
     angles = torch.atan2(points[:, :, 1], points[:, :, 0])
+    sampled_angles = torch.transpose(torch.transpose(torch_linspace(angles, torch.roll(angles, 1, dims=-1), n_samples), 0, 2), 0, 1)
+    points = torch_angles_to_ring(sampled_angles)
+    return angles, points
+
+
+def randomly_resample_points_ring(points, n_samples):
+    angles = torch.atan2(points[:, :, 1], points[:, :, 0])
     rand_mask = torch.randint(0, 2, angles.shape) * 2 * np.pi
     angles_remap = torch.remainder(angles, 2 * np.pi) - rand_mask.to(angles.device)
     rolled_angles = torch.roll(angles_remap, 1, dims=-1)
