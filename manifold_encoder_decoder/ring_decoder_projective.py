@@ -59,7 +59,7 @@ batch_size = 50
 n_points_compare = 20 # how many points on the ring to compare distances between
 n_points_length = 1000
 
-n_epochs = 10000
+n_epochs = 5000
 
 encoder_losses = []
 decoder_losses = []
@@ -84,8 +84,6 @@ for _ in range(n_epochs):
     normed_encoded = torch.einsum("...k, ...kj -> ...kj", 1/r_encoded, encoded)
     decoded = decoder_net(normed_encoded)
     decoder_loss = torch.sum(torch.square(decoded - data_samples))/(batch_size * n_points_compare)
-
-
 
     encoded_angles, resampled_encoded_points, angular_distance = generative_isometry_util.randomly_resample_points_ring(normed_encoded, n_resample)
     normed_angular_distance = angular_distance/torch.mean(angular_distance)
@@ -129,12 +127,14 @@ with torch.no_grad():
     r_encoded = torch.sqrt(torch.sum(torch.square(encoded), dim=-1))
     normed_encoded = torch.einsum("...k, ...kj -> ...kj", 1 / r_encoded, encoded)
     encoded_angles, resampled_encoded_points, encoded_distance = generative_isometry_util.randomly_resample_points_ring(torch.unsqueeze(normed_encoded, 0), n_resample)
+    order = torch.argsort(encoded_angles, dim=-1)[0]
     normed_angular_distance = encoded_distance / torch.mean(encoded_distance)
     decoded = best_decoder(resampled_encoded_points)
     decoded_distances = generative_isometry_util.integrated_point_metric(decoded)
     normed_decoder_distance = decoded_distances / torch.mean(decoded_distances)
     rel_error = (normed_angular_distance - normed_decoder_distance)/normed_decoder_distance
 
+order = order.cpu().numpy()
 normed_encoded = normed_encoded.cpu().numpy()
 phases = encoded_angles.cpu().numpy()
 rel_error = np.squeeze(rel_error.cpu().numpy())
@@ -154,6 +154,8 @@ out_dir = os.path.join(data_dir, "processing_results/{}".format(datetime.datetim
 os.makedirs(out_dir, exist_ok=False)
 fig.savefig(os.path.join(out_dir, "mapping.png"))
 
+ordered_points = data[order, :]
+np.save(os.path.join(out_dir, "ordered_points.npy"), ordered_points)
 
 if true_phases is not None:
     true_phases_refed = true_phases - true_phases[0]
@@ -171,5 +173,3 @@ if true_phases is not None:
     axs.plot(line, line, color="black", linestyle="--", label="y=x")
     axs.legend()
     fig.savefig(os.path.join(out_dir, "true_phases.png"))
-
-
