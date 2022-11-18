@@ -1,3 +1,4 @@
+import datetime
 import matplotlib.pyplot as plt
 import numpy as np
 import os
@@ -10,7 +11,7 @@ print('Using device:', device)
 from manifold_encoder_decoder import generative_isometry_util
 
 # load some manifold data
-data_dir = os.path.join(os.getenv("HOME"), "manifold_test_data/2022-11-04-18-51-10")
+data_dir = os.path.join(os.getenv("HOME"), "manifold_test_data/2022-11-17-13-24-23")
 data = np.load(os.path.join(data_dir, "encoded_points.npy"))
 true_phases = None # in general we won't have labels
 
@@ -136,6 +137,10 @@ axs[1].set_xlabel("Percent Distance Difference")
 axs[1].set_ylabel("Counts")
 axs[1].set_xlabel("Violation of Isometry")
 
+out_dir = os.path.join(data_dir, "processing_results/{}".format(datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')))
+os.makedirs(out_dir, exist_ok=False)
+fig.savefig(os.path.join(out_dir, "mapping.png"))
+
 # if we have label data we can plot actual vs predicted phase
 true_phases = np.load(os.path.join(data_dir, "true_phases.npy"))
 if true_phases is not None:
@@ -152,5 +157,6 @@ if true_phases is not None:
     line = np.arange(start=-np.pi, stop=np.pi, step=0.01)
     axs.plot(line, line, color="black", linestyle="--", label="y=x")
     axs.legend()
+    fig.savefig(os.path.join(out_dir, "true_phases.png"))
 
 plt.show()
