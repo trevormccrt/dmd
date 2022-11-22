@@ -50,15 +50,33 @@ def resample_points_ring(points, n_samples):
     return angles, points
 
 
-def randomly_resample_points_ring(points, n_samples):
+def resample_points_ring_directed(points, n_samples, direction):
     angles = torch.atan2(points[:, :, 1], points[:, :, 0])
-    rand_mask = torch.randint(0, 2, angles.shape) * 2 * np.pi
+    rand_mask = direction * 2 * np.pi
     angles_remap = torch.remainder(angles, 2 * np.pi) - rand_mask.to(angles.device)
     rolled_angles = torch.roll(angles_remap, 1, dims=-1)
     angle_distances = torch.abs(angles_remap - rolled_angles)
     sampled_angles = torch.transpose(torch.transpose(torch_linspace(angles_remap, rolled_angles, n_samples), 0, 2), 0, 1)
     new_points = torch_angles_to_ring(sampled_angles)
     return angles, new_points, angle_distances
+
+
+def walk_manifold(start_phases, end_phases, n_points):
+    manifold_dim = start_phases.shape[-1]
+    all_start = torch.tile(torch.unsqueeze(start_phases, dim=-2), (n_points, 1))
+    all_end = torch.tile(torch.unsqueeze(end_phases, dim=-2), (n_points, 1))
+    walked_phases = torch_linspace(start_phases, end_phases, n_points)
+    perm = list(np.roll(list(range(len(walked_phases.shape))), -1))
+    walked_phases = torch.permute(walked_phases, perm)
+    walked_phases = torch.transpose(walked_phases, -1, -2)
+    outputs = None
+    for i in range(manifold_dim):
+        this_ouput = torch.cat([all_end[...,:, :i], torch.unsqueeze(walked_phases[..., :, i], -1) , all_start[..., :, i+1:]], dim=-1)
+        if outputs is None:
+            outputs = this_ouput
+        else:
+            outputs = torch.cat([outputs, this_ouput[..., 1:, :]], dim=-2)
+    return outputs
 
 
 class CircleDistance(torch.nn.Module):

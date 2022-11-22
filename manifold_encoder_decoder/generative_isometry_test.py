@@ -25,6 +25,18 @@ def test_ring_interpolation():
     np.testing.assert_allclose(point_metric, angular_metric, rtol=1e-3)
 
 
+def test_walk_manifold():
+    n_dims = 5
+    n_samples = 10
+    start = np.random.uniform(-1, 1, n_dims)
+    end = np.random.uniform(-1, 1, n_dims)
+    start_phases = torch.from_numpy(start)
+    end_phases = torch.from_numpy(end)
+    walked = generative_isometry_util.walk_manifold(start_phases, end_phases, n_samples).detach().numpy()
+    np.testing.assert_allclose(walked[0, :], start_phases)
+    np.testing.assert_allclose(walked[-1, :], end_phases)
+
+
 def test_circularization():
     with torch.no_grad():
         true_shift = np.random.uniform(-1, 1, 2)
@@ -58,3 +70,6 @@ def test_center_finding():
         opt.step()
     np.testing.assert_allclose(true_shift, circularizer.shift.detach().numpy(), rtol=1e-3)
     np.testing.assert_allclose(true_rad, circularizer.rad.detach().numpy(), rtol=1e-3)
+
+
+test_walk_manifold()
