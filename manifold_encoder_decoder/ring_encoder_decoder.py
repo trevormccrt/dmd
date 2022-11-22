@@ -12,7 +12,7 @@ print('Using device:', device)
 
 
 in_dim = 2 # we will give the NN points on a ring in 2D as input
-out_dim = 3 # whatever dimension we want to encode into
+out_dim = 12 # whatever dimension we want to encode into
 encoder_hidden_dim = 1000
 encoder_n_hidden = 1
 decoder_hidden_dim = encoder_hidden_dim

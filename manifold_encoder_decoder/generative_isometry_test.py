@@ -70,6 +70,3 @@ def test_center_finding():
         opt.step()
     np.testing.assert_allclose(true_shift, circularizer.shift.detach().numpy(), rtol=1e-3)
     np.testing.assert_allclose(true_rad, circularizer.rad.detach().numpy(), rtol=1e-3)
-
-
-test_walk_manifold()
