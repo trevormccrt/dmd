@@ -11,7 +11,7 @@ print('Using device:', device)
 from manifold_encoder_decoder import generative_isometry_util, encoder_decoder_core
 
 # load some manifold data
-data_dir = os.path.join(os.getenv("HOME"), "manifold_test_data/2022-11-17-16-48-18")
+data_dir = os.path.join(os.getenv("HOME"), "manifold_test_data/noised_5")
 data = np.load(os.path.join(data_dir, "encoded_points.npy"))
 true_phases = None # in general we won't have labels
 # if we have label data we can plot actual vs predicted phase
@@ -20,7 +20,7 @@ true_phases = np.load(os.path.join(data_dir, "true_phases.npy"))
 
 in_dim = np.shape(data)[1] # we will give the NN points on a ring in 2D as input
 compressed_dim = 2 # whatever dimension we want to encode into
-encoder_hidden_dim = 1000
+encoder_hidden_dim = 1500
 encoder_n_hidden = 1
 decoder_hidden_dim = encoder_hidden_dim
 decoder_n_hidden = encoder_n_hidden
@@ -36,32 +36,32 @@ batch_size = 50
 n_points_compare = 20 # how many points on the ring to compare distances between
 n_points_length = 1000
 
-n_epochs = 1000
+n_epochs = 10000
 
 encoder_losses = []
 decoder_losses = []
 
 sample_range = np.arange(start=0, stop=np.shape(data)[0], step=1)
 best_loss = np.inf
-order_reduction_thresh = 0.1
+order_reduction_thresh = 1
 do_order_reduction = False
 total_model_length_start = torch.tensor([0], dtype=torch.get_default_dtype()).to(device)
 total_model_length_end = torch.tensor([2 * np.pi], dtype=torch.get_default_dtype()).to(device)
 total_model_length_dir = torch.tensor([1], dtype=torch.get_default_dtype()).to(device)
-for _ in range(n_epochs):
+for i in range(n_epochs):
     samples = np.array([data[np.random.choice(sample_range, size=n_points_compare, replace=False), :] for i in range(batch_size)])
     data_samples = torch.tensor(samples, dtype=torch.get_default_dtype()).to(device)
     opt.zero_grad()
     decoded_points, decoded_angles = decoder_net(data_samples)
     re_encoded_points = encoder_net(decoded_points)
-    decoder_loss = torch.sum(torch.square(re_encoded_points - data_samples))/(batch_size * n_points_compare)
+    decoder_loss = 50 * torch.sum(torch.square(re_encoded_points - data_samples))/(batch_size * n_points_compare)
     rolled_decoded_angles = torch.roll(decoded_angles, 1, dims=-2)
     distance_calculation_directions = torch.randint(0, 2, decoded_angles.shape).to(device)
     angular_distances, model_distances = encoder_net.model_length(decoded_angles, rolled_decoded_angles, direction=distance_calculation_directions, n_points_integrate=n_resample)
 
     normed_angular_distance = angular_distances/torch.mean(angular_distances)
     normed_model_distance = model_distances/torch.mean(model_distances)
-    distance_cost = 20 * torch.sum(torch.square(normed_angular_distance - normed_model_distance))/(batch_size * n_points_compare)
+    distance_cost = 50 * torch.sum(torch.square(normed_angular_distance - normed_model_distance))/(batch_size * n_points_compare)
 
     ordered_decoded, _ = torch.sort(decoded_angles, dim=-2)
     _, nearest_model_distances = encoder_net.model_length(total_model_length_start, total_model_length_end,
@@ -89,7 +89,7 @@ for _ in range(n_epochs):
         best_loss = loss
         best_encoder = copy.deepcopy(encoder_net)
         best_decoder = copy.deepcopy(decoder_net)
-        print("decoding loss: {}, distance cost: {}, order reduction: {}".format( decoder_loss, distance_cost, capacity_factor))
+        print("iteration: {}, decoding loss: {}, distance cost: {}, order reduction: {}".format(i, decoder_loss, distance_cost, capacity_factor))
     loss.backward()
     opt.step()
 
@@ -125,6 +125,9 @@ fig.savefig(os.path.join(out_dir, "mapping.png"))
 
 ordered_points = data[order, :]
 np.save(os.path.join(out_dir, "ordered_points.npy"), ordered_points)
+
+torch.save(best_encoder.state_dict(), os.path.join(out_dir, "best_encoder_state.pt"))
+torch.save(best_decoder.state_dict(), os.path.join(out_dir, "best_decoder_state.pt"))
 
 if true_phases is not None:
     true_phases_refed = true_phases - true_phases[0]

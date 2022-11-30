@@ -8,12 +8,12 @@ from manifold_encoder_decoder import generative_isometry_util
 def wide_n_deep(input_dimension, output_dimension, n_hidden, hidden_dim):
     layers = []
     layers.append(nn.Linear(input_dimension, int(hidden_dim / 2)))
-    layers.append(nn.ReLU())
+    layers.append(nn.Tanh())
     for _ in range(n_hidden):
         layers.append(nn.LazyLinear(hidden_dim))
-        layers.append(nn.ReLU())
+        layers.append(nn.Tanh())
     layers.append(nn.Linear(hidden_dim, int(hidden_dim / 2)))
-    layers.append(nn.ReLU())
+    layers.append(nn.Tanh())
     layers.append(nn.Linear(int(hidden_dim / 2), output_dimension))
     return nn.Sequential(*layers)
 

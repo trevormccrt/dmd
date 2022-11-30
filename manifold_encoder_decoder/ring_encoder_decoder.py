@@ -1,3 +1,4 @@
+import copy
 import datetime
 import matplotlib.pyplot as plt
 import numpy as np
@@ -12,7 +13,7 @@ print('Using device:', device)
 
 
 in_dim = 2 # we will give the NN points on a ring in 2D as input
-out_dim = 12 # whatever dimension we want to encode into
+out_dim = 3 # whatever dimension we want to encode into
 encoder_hidden_dim = 1000
 encoder_n_hidden = 1
 decoder_hidden_dim = encoder_hidden_dim
@@ -52,6 +53,7 @@ n_epochs = 1000
 
 encoder_losses = []
 decoder_losses = []
+best_loss = np.inf
 for _ in range(n_epochs):
     # sample input phases
     phases_numpy = np.random.uniform(-np.pi, np.pi, (batch_size, n_points_compare))
@@ -90,15 +92,19 @@ for _ in range(n_epochs):
     loss = loss_encoding + loss_decoding
     encoder_losses.append(loss_encoding)
     decoder_losses.append(loss_decoding)
-    print("encoding loss: {}, decoding loss: {}".format(loss_encoding, loss_decoding))
+    if loss < best_loss:
+        best_loss = loss
+        best_encoder = copy.deepcopy(encoder_net)
+        best_decoder = copy.deepcopy(decoder_net)
+        print("encoding loss: {}, decoding loss: {}".format(loss_encoding, loss_decoding))
     loss.backward()
     opt.step()
 
 angles = np.arange(start=-np.pi, stop=np.pi, step=0.01)
 with torch.no_grad():
     test_points = torch.tensor(generative_isometry_util.angles_to_ring(angles), dtype=torch.get_default_dtype()).to(device)
-    forward_pred = encoder_net.forward(test_points)
-    decoder_pred = decoder_net.forward(forward_pred)
+    forward_pred = best_encoder.forward(test_points)
+    decoder_pred = best_decoder.forward(forward_pred)
 forward_pred = forward_pred.cpu().detach().numpy()
 decoder_pred = decoder_pred.cpu().detach().numpy()
 
@@ -158,7 +164,7 @@ plt.show()
 n_samples = 1000
 samples = np.random.uniform(-np.pi, np.pi, n_samples)
 point_samples = generative_isometry_util.angles_to_ring(samples)
-test_data = encoder_net.forward(torch.tensor(point_samples, dtype=torch.get_default_dtype()).to(device))
+test_data = best_encoder.forward(torch.tensor(point_samples, dtype=torch.get_default_dtype()).to(device))
 out_dir = os.path.join(os.getenv("HOME"), "manifold_test_data/{}".format(datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')))
 os.makedirs(out_dir, exist_ok=False)
 np.save(os.path.join(out_dir, "true_phases.npy"), samples)
