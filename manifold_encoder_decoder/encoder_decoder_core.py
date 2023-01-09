@@ -55,6 +55,12 @@ class AllPeriodicEncoder(nn.Module):
         distance = generative_isometry_util.integrated_point_metric(encoded_points)
         return angular_length, distance
 
+    def straight_line_distance(self, start_points, end_points, n_points_integrate=50):
+        angular_distances, start_remap, end_remap = generative_isometry_util.minimum_periodic_distance(
+            start_points, end_points)
+        span = torch.transpose(generative_isometry_util.torch_linspace(start_remap, end_remap, n_points_integrate), 0, -2)
+        return generative_isometry_util.integrated_point_metric(span)
+
 
 class RingEncoder(AllPeriodicEncoder):
     def __init__(self, encoded_dimension, hidden_layer_dimension=1000, n_hidden_layers=1):

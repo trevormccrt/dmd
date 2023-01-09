@@ -79,6 +79,20 @@ def walk_manifold(start_phases, end_phases, n_points):
     return outputs
 
 
+def periodic_reflections(point_list):
+    point_list_up = torch.tile(torch.unsqueeze(point_list, -1), [3])
+    return point_list_up - torch.tensor([-2 * np.pi, 0, 2 * np.pi]).to(point_list.device)
+
+
+def minimum_periodic_distance(point_list_1, point_list_2):
+    list_1_up = torch.flatten(torch.tile(torch.unsqueeze(periodic_reflections(point_list_1), -1), [3]), start_dim=-2)
+    list_2_up = torch.flatten(torch.tile(torch.unsqueeze(periodic_reflections(point_list_2), -2), [3, 1]), start_dim=-2)
+    dists = np.square(list_2_up - list_1_up)
+    min_dists, min_dist_idxs = torch.min(dists, dim=-1)
+    return torch.sqrt(torch.sum(min_dists, dim=-1) + 1e-13), torch.squeeze(torch.gather(list_1_up, -1, torch.unsqueeze(min_dist_idxs, -1)), -1), \
+           torch.squeeze(torch.gather(list_2_up, -1, torch.unsqueeze(min_dist_idxs, -1)), -1)
+
+
 class CircleDistance(torch.nn.Module):
     def __init__(self, init_shift=torch.from_numpy(np.array([0.0, 0.0])), init_rad=torch.from_numpy(np.array([1.0]))):
         super().__init__()
@@ -93,4 +107,3 @@ class CircleDistance(torch.nn.Module):
 
     def phases(self, inputs):
         return torch.atan2(inputs[..., 1], inputs[..., 0])
-
