@@ -70,3 +70,19 @@ def test_center_finding():
         opt.step()
     np.testing.assert_allclose(true_shift, circularizer.shift.detach().numpy(), rtol=1e-3)
     np.testing.assert_allclose(true_rad, circularizer.rad.detach().numpy(), rtol=1e-3)
+
+
+def test_minimum_periodic_dist():
+    test_1d_1 = torch.tensor([[2 * np.pi - 0.5], [1]])
+    test_1d_2 = torch.tensor([[0.5], [1.2]])
+    with torch.no_grad():
+        min_dist, p1_shift, p2_shift = generative_isometry_util.minimum_periodic_distance(
+            test_1d_1, test_1d_2)
+    np.testing.assert_allclose(min_dist, [1, 0.2], rtol=1e-6)
+
+    test_2d_1 = torch.tensor([[0.5, 0.5], [0, 0]])
+    test_2d_2 = torch.tensor([[2 * np.pi - 0.5, 2 * np.pi - 0.5], [1, 1]])
+    with torch.no_grad():
+        min_dist, p1_shift, p2_shift = generative_isometry_util.minimum_periodic_distance(
+            test_2d_1, test_2d_2)
+    np.testing.assert_allclose(min_dist, [np.sqrt(2), np.sqrt(2)], rtol=1e-6)
