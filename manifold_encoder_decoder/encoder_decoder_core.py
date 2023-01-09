@@ -42,24 +42,18 @@ class AllPeriodicEncoder(nn.Module):
         flat_x = torch.reshape(x, (*x.shape[:-2], -1))
         return self.net(flat_x)
 
-    def model_length(self, phases_start, phases_end, n_points_integrate=50, direction=None):
-        if direction is None:
-            direction = torch.zeros_like(phases_start).to(phases_start.device)
-        rand_mask = direction * 2 * np.pi
-        start_remap = torch.remainder(phases_start, 2 * np.pi) - rand_mask
-        end_remap = torch.remainder(phases_end, 2 * np.pi)
-        angular_length = torch.sum(torch.abs(end_remap - start_remap), dim=-1)
-        resampled_angles = generative_isometry_util.walk_manifold(start_remap, end_remap, n_points_integrate)
+    def model_length(self, phases_start, phases_end, n_points_integrate=50):
+        angular_length = torch.sum(torch.abs(phases_end - phases_start), dim=-1)
+        resampled_angles = torch.moveaxis(generative_isometry_util.torch_linspace(phases_start, phases_end, n_points_integrate), 0, -2)
         resampled_points = generative_isometry_util.torch_angles_to_ring(resampled_angles)
         encoded_points = self.forward(resampled_points)
         distance = generative_isometry_util.integrated_point_metric(encoded_points)
         return angular_length, distance
 
-    def straight_line_distance(self, start_points, end_points, n_points_integrate=50):
+    def straight_line_distance(self, start_phases, end_phases, n_points_integrate=50):
         angular_distances, start_remap, end_remap = generative_isometry_util.minimum_periodic_distance(
-            start_points, end_points)
-        span = torch.transpose(generative_isometry_util.torch_linspace(start_remap, end_remap, n_points_integrate), 0, -2)
-        return generative_isometry_util.integrated_point_metric(span)
+            start_phases, end_phases)
+        return angular_distances, self.model_length(start_remap, end_remap, n_points_integrate)[1]
 
 
 class RingEncoder(AllPeriodicEncoder):
@@ -71,7 +65,5 @@ class RingEncoder(AllPeriodicEncoder):
             next(self.net.parameters()).device)
         total_model_length_end = torch.tensor([2 * np.pi], dtype=torch.get_default_dtype()).to(
             next(self.net.parameters()).device)
-        total_model_length_dir = torch.tensor([1], dtype=torch.get_default_dtype()).to(
-            next(self.net.parameters()).device)
         return self.model_length(total_model_length_start, total_model_length_end,
-                                 n_points_integrate=n_points_integrate, direction=total_model_length_dir)[1]
+                                 n_points_integrate=n_points_integrate)[1]

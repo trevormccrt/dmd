@@ -24,7 +24,7 @@ encoder_hidden_dim = 1500
 encoder_n_hidden = 1
 decoder_hidden_dim = encoder_hidden_dim
 decoder_n_hidden = encoder_n_hidden
-n_resample = 50 # how many points to use in distance integration calculation
+n_resample = 75 # how many points to use in distance integration calculation
 
 encoder_net = encoder_decoder_core.RingEncoder(in_dim, encoder_hidden_dim, encoder_n_hidden).to(device)
 decoder_net = encoder_decoder_core.AllPeriodicDecoder(in_dim, 1, decoder_hidden_dim, decoder_n_hidden).to(device)
@@ -50,10 +50,9 @@ for i in range(n_epochs):
     decoded_points, decoded_angles = decoder_net(data_samples)
     re_encoded_points = encoder_net(decoded_points)
     decoder_loss = 50 * torch.sum(torch.square(re_encoded_points - data_samples))/(batch_size * n_points_compare)
-    rolled_decoded_angles = torch.roll(decoded_angles, 1, dims=-2)
-    distance_calculation_directions = torch.randint(0, 2, decoded_angles.shape).to(device)
-    angular_distances, model_distances = encoder_net.model_length(decoded_angles, rolled_decoded_angles, direction=distance_calculation_directions, n_points_integrate=n_resample)
 
+    rolled_decoded_angles = torch.roll(decoded_angles, 1, dims=-2)
+    angular_distances, model_distances = encoder_net.straight_line_distance(decoded_angles, rolled_decoded_angles, n_points_integrate=n_resample)
     normed_angular_distance = angular_distances/torch.mean(angular_distances)
     normed_model_distance = model_distances/torch.mean(model_distances)
     distance_cost = 50 * torch.sum(torch.square(normed_angular_distance - normed_model_distance))/(batch_size * n_points_compare)
@@ -65,7 +64,6 @@ for i in range(n_epochs):
     total_euclid_distance = torch.sum(
         torch.sqrt(torch.sum(torch.square(decoded_in_order - torch.roll(decoded_in_order, 1, dims=-2)), dim=-1) + 1e-13),
         dim=-1)
-
     capacity_factor = torch.mean((model_ring_length - total_euclid_distance) / total_euclid_distance)
 
     loss = decoder_loss + distance_cost
@@ -83,14 +81,14 @@ for i in range(n_epochs):
         best_encoder = copy.deepcopy(encoder_net)
         best_decoder = copy.deepcopy(decoder_net)
         print("iteration: {}, decoding loss: {}, distance cost: {}, order reduction: {}".format(i, decoder_loss, distance_cost, capacity_factor))
+
     loss.backward()
     opt.step()
 
 
 with torch.no_grad():
     decoded_points, decoded_angles = best_decoder(torch.tensor(data, dtype=torch.get_default_dtype()).to(device))
-    sample_direction = torch.randint(0, 2, decoded_angles.shape).to(device)
-    angular_distance, model_distance = best_encoder.model_length(decoded_angles, torch.roll(decoded_angles, 1, dims=-2), direction=sample_direction, n_points_integrate=n_resample)
+    angular_distance, model_distance = best_encoder.model_length(decoded_angles, torch.roll(decoded_angles, 1, dims=-2), n_points_integrate=n_resample)
     order = torch.squeeze(torch.argsort(decoded_angles, dim=-2))
     normed_angular_distance = angular_distance / torch.mean(angular_distance)
     normed_model_distance = model_distance / torch.mean(model_distance)
