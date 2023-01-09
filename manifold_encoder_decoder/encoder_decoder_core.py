@@ -51,7 +51,6 @@ class AllPeriodicEncoder(nn.Module):
         angular_length = torch.sum(torch.abs(end_remap - start_remap), dim=-1)
         resampled_angles = generative_isometry_util.walk_manifold(start_remap, end_remap, n_points_integrate)
         resampled_points = generative_isometry_util.torch_angles_to_ring(resampled_angles)
-        a = resampled_angles.cpu().detach().numpy()
         encoded_points = self.forward(resampled_points)
         distance = generative_isometry_util.integrated_point_metric(encoded_points)
         return angular_length, distance
