@@ -11,7 +11,7 @@ print('Using device:', device)
 from manifold_encoder_decoder import generative_isometry_util, encoder_decoder_core
 
 # load some manifold data
-data_dir = os.path.join(os.getenv("HOME"), "manifold_test_data/noised_5")
+data_dir = os.path.join(os.getenv("HOME"), "manifold_test_data/2022-12-12-15-59-35")
 data = np.load(os.path.join(data_dir, "encoded_points.npy"))
 true_phases = None # in general we won't have labels
 # if we have label data we can plot actual vs predicted phase
@@ -26,7 +26,7 @@ decoder_hidden_dim = encoder_hidden_dim
 decoder_n_hidden = encoder_n_hidden
 n_resample = 50 # how many points to use in distance integration calculation
 
-encoder_net = encoder_decoder_core.AllPeriodicEncoder(in_dim, 1, encoder_hidden_dim, encoder_n_hidden).to(device)
+encoder_net = encoder_decoder_core.RingEncoder(in_dim, encoder_hidden_dim, encoder_n_hidden).to(device)
 decoder_net = encoder_decoder_core.AllPeriodicDecoder(in_dim, 1, decoder_hidden_dim, decoder_n_hidden).to(device)
 
 params = list(encoder_net.parameters()) + list(decoder_net.parameters())
@@ -36,18 +36,13 @@ batch_size = 50
 n_points_compare = 20 # how many points on the ring to compare distances between
 n_points_length = 1000
 
-n_epochs = 10000
+n_epochs = 1500
 
-encoder_losses = []
-decoder_losses = []
 
 sample_range = np.arange(start=0, stop=np.shape(data)[0], step=1)
 best_loss = np.inf
 order_reduction_thresh = 1
 do_order_reduction = False
-total_model_length_start = torch.tensor([0], dtype=torch.get_default_dtype()).to(device)
-total_model_length_end = torch.tensor([2 * np.pi], dtype=torch.get_default_dtype()).to(device)
-total_model_length_dir = torch.tensor([1], dtype=torch.get_default_dtype()).to(device)
 for i in range(n_epochs):
     samples = np.array([data[np.random.choice(sample_range, size=n_points_compare, replace=False), :] for i in range(batch_size)])
     data_samples = torch.tensor(samples, dtype=torch.get_default_dtype()).to(device)
@@ -64,16 +59,14 @@ for i in range(n_epochs):
     distance_cost = 50 * torch.sum(torch.square(normed_angular_distance - normed_model_distance))/(batch_size * n_points_compare)
 
     ordered_decoded, _ = torch.sort(decoded_angles, dim=-2)
-    _, nearest_model_distances = encoder_net.model_length(total_model_length_start, total_model_length_end,
-                                                          n_points_integrate=n_points_length,
-                                                          direction=total_model_length_dir)
+    model_ring_length = encoder_net.total_length(n_points_length)
     ordered_points = generative_isometry_util.torch_angles_to_ring(ordered_decoded)
     decoded_in_order = encoder_net(ordered_points)
     total_euclid_distance = torch.sum(
         torch.sqrt(torch.sum(torch.square(decoded_in_order - torch.roll(decoded_in_order, 1, dims=-2)), dim=-1) + 1e-13),
         dim=-1)
-    model_distance = torch.sum(nearest_model_distances)
-    capacity_factor = torch.mean((model_distance - total_euclid_distance) / total_euclid_distance)
+
+    capacity_factor = torch.mean((model_ring_length - total_euclid_distance) / total_euclid_distance)
 
     loss = decoder_loss + distance_cost
 
@@ -144,3 +137,5 @@ if true_phases is not None:
     axs.plot(line, line, color="black", linestyle="--", label="y=x")
     axs.legend()
     fig.savefig(os.path.join(out_dir, "true_phases.png"))
+
+plt.show()
