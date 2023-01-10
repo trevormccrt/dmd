@@ -86,3 +86,11 @@ def test_minimum_periodic_dist():
         min_dist, p1_shift, p2_shift = generative_isometry_util.minimum_periodic_distance(
             test_2d_1, test_2d_2)
     np.testing.assert_allclose(min_dist, [np.sqrt(2), np.sqrt(2)], rtol=1e-6)
+
+
+def closest_points_periodic_test():
+    points = torch.tensor(np.random.uniform(-1, 1, (7, 10, 4)))
+    generative_isometry_util.closest_points_periodic(points)
+
+
+closest_points_periodic_test()

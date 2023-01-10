@@ -95,6 +95,14 @@ def minimum_periodic_distance(point_list_1, point_list_2):
     return total_min_dists, remapped_1, remapped_2
 
 
+def closest_points_periodic(point_list):
+    point_list = torch.swapaxes(point_list, -2, -1)
+    n_points_compare = point_list.size(-1)
+    list_a = torch.moveaxis(torch.tile(torch.unsqueeze(point_list, -1), [n_points_compare]), -3, -1)
+    list_b = torch.moveaxis(torch.tile(torch.unsqueeze(point_list, -2), [n_points_compare, 1]), -3, -1)
+    print("")
+
+
 
 class CircleDistance(torch.nn.Module):
     def __init__(self, init_shift=torch.from_numpy(np.array([0.0, 0.0])), init_rad=torch.from_numpy(np.array([1.0]))):
