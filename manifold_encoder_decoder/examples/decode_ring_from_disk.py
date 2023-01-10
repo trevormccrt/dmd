@@ -9,12 +9,12 @@ from manifold_encoder_decoder import s1_direct_product_decoder
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 # load some manifold data
-data_dir = os.path.join(os.getenv("HOME"), "manifold_test_data/noised_3")
+data_dir = os.path.join(os.getenv("HOME"), "manifold_test_data/2023-01-09-17-04-19")
 data = np.load(os.path.join(data_dir, "encoded_points.npy"))
 true_phases = np.load(os.path.join(data_dir, "true_phases.npy"))
 
 encoder, decoder = s1_direct_product_decoder.train(data=data, manifold_dim=1, device=device,
-                                                   n_training_iterations=3000, decoder_weight=10, order_red_weight=0.1)
+                                                   n_training_iterations=400, decoder_weight=10, order_red_weight=0.1)
 
 with torch.no_grad():
     decoded_points, decoded_angles = decoder(torch.tensor(data, dtype=torch.get_default_dtype()).to(device))
@@ -37,4 +37,3 @@ line = np.arange(start=-np.pi, stop=np.pi, step=0.01)
 axs.plot(line, line, color="black", linestyle="--", label="y=x")
 axs.legend()
 plt.show()
-print("")
