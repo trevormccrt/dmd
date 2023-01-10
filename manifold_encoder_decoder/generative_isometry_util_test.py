@@ -89,8 +89,7 @@ def test_minimum_periodic_dist():
 
 
 def closest_points_periodic_test():
-    points = torch.tensor(np.random.uniform(-1, 1, (7, 10, 4)))
-    generative_isometry_util.closest_points_periodic(points)
-
-
-closest_points_periodic_test()
+    points = torch.from_numpy(np.array([[0, 0.1], [0, 2 * np.pi - 0.1], [0.2, 2 * np.pi - 0.2], [0.2, 0.2]]))
+    with torch.no_grad():
+        min_dist, matched_a, matched_b = generative_isometry_util.closest_points_periodic(points)
+    np.testing.assert_allclose(min_dist, [0.2, 0.2, np.sqrt(0.2**2 + 0.1**2), np.sqrt(0.2**2 + 0.1**2)], rtol=1e-6)
