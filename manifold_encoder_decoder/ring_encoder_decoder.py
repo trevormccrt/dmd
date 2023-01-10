@@ -6,14 +6,14 @@ import os
 import torch
 from torch import nn
 
-from manifold_encoder_decoder import generative_isometry_util
+from manifold_encoder_decoder import geometry_util
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print('Using device:', device)
 
 
 in_dim = 2 # we will give the NN points on a ring in 2D as input
-out_dim = 3 # whatever dimension we want to encode into
+out_dim = 12 # whatever dimension we want to encode into
 encoder_hidden_dim = 1000
 encoder_n_hidden = 1
 decoder_hidden_dim = encoder_hidden_dim
@@ -59,15 +59,15 @@ for _ in range(n_epochs):
     phases_numpy = np.random.uniform(-np.pi, np.pi, (batch_size, n_points_compare))
 
     # sample in-between input phases for integration
-    phases_span = generative_isometry_util.densely_sample_angles(phases_numpy, n_resample)
+    phases_span = geometry_util.densely_sample_angles(phases_numpy, n_resample)
 
     # map phases to a ring in 2D (better for input to NN)
-    mapped_init_angles = torch.tensor(generative_isometry_util.angles_to_ring(phases_numpy), dtype=torch.get_default_dtype()).to(device)
-    mapped_span = torch.tensor(generative_isometry_util.angles_to_ring(phases_span), dtype=torch.get_default_dtype()).to(device)
+    mapped_init_angles = torch.tensor(geometry_util.angles_to_ring(phases_numpy), dtype=torch.get_default_dtype()).to(device)
+    mapped_span = torch.tensor(geometry_util.angles_to_ring(phases_span), dtype=torch.get_default_dtype()).to(device)
 
     # input tensor and true distance on the ring
     phase_batch = torch.tensor(phases_span, dtype=torch.get_default_dtype()).to(device)
-    phase_metric = torch.tensor(generative_isometry_util.integrated_angle_metric(phases_numpy), dtype=torch.get_default_dtype()).to(device)
+    phase_metric = torch.tensor(geometry_util.integrated_angle_metric(phases_numpy), dtype=torch.get_default_dtype()).to(device)
     scaled_phase_metric = phase_metric/torch.mean(phase_metric)
 
     opt.zero_grad()
@@ -77,7 +77,7 @@ for _ in range(n_epochs):
     encoded_points_reshaped = torch.reshape(encoded_points, [*phase_batch.size(), -1])
 
     # calculate distance between encoded points
-    encoded_distances = generative_isometry_util.integrated_point_metric(encoded_points_reshaped)
+    encoded_distances = geometry_util.integrated_point_metric(encoded_points_reshaped)
     scaled_encoded_distances = encoded_distances/torch.mean(encoded_distances)
 
     # send only the original points through the decoder (no need to send the extra points we sampled for integration)
@@ -102,7 +102,7 @@ for _ in range(n_epochs):
 
 angles = np.arange(start=-np.pi, stop=np.pi, step=0.01)
 with torch.no_grad():
-    test_points = torch.tensor(generative_isometry_util.angles_to_ring(angles), dtype=torch.get_default_dtype()).to(device)
+    test_points = torch.tensor(geometry_util.angles_to_ring(angles), dtype=torch.get_default_dtype()).to(device)
     forward_pred = best_encoder.forward(test_points)
     decoder_pred = best_decoder.forward(forward_pred)
 forward_pred = forward_pred.cpu().detach().numpy()
@@ -163,7 +163,7 @@ plt.show()
 
 n_samples = 1000
 samples = np.random.uniform(-np.pi, np.pi, n_samples)
-point_samples = generative_isometry_util.angles_to_ring(samples)
+point_samples = geometry_util.angles_to_ring(samples)
 test_data = best_encoder.forward(torch.tensor(point_samples, dtype=torch.get_default_dtype()).to(device))
 out_dir = os.path.join(os.getenv("HOME"), "manifold_test_data/{}".format(datetime.datetime.now().strftime('%Y-%m-%d-%H-%M-%S')))
 os.makedirs(out_dir, exist_ok=False)

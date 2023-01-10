@@ -2,7 +2,7 @@ import numpy as np
 import torch
 from torch import nn
 
-from manifold_encoder_decoder import generative_isometry_util
+from manifold_encoder_decoder import geometry_util
 
 
 def wide_n_deep(input_dimension, output_dimension, n_hidden, hidden_dim):
@@ -29,7 +29,7 @@ class AllPeriodicDecoder(nn.Module):
         encoded_reshape = torch.reshape(encoded, [*encoded.shape[:-1], -1, 2])
         r_encoded = torch.sqrt(torch.sum(torch.square(encoded_reshape), dim=-1))
         scaled_encoded = torch.einsum("...k, ...kj -> ...kj", 1 / r_encoded, encoded_reshape)
-        return scaled_encoded, torch.atan2(scaled_encoded[..., 0], scaled_encoded[..., 1])
+        return scaled_encoded, torch.atan2(scaled_encoded[..., 1], scaled_encoded[..., 0])
 
 
 class AllPeriodicEncoder(nn.Module):
@@ -44,14 +44,14 @@ class AllPeriodicEncoder(nn.Module):
 
     def model_length(self, phases_start, phases_end, n_points_integrate=50):
         angular_length = torch.sum(torch.abs(phases_end - phases_start), dim=-1)
-        resampled_angles = torch.moveaxis(generative_isometry_util.torch_linspace(phases_start, phases_end, n_points_integrate), 0, -2)
-        resampled_points = generative_isometry_util.torch_angles_to_ring(resampled_angles)
+        resampled_angles = torch.moveaxis(geometry_util.torch_linspace(phases_start, phases_end, n_points_integrate), 0, -2)
+        resampled_points = geometry_util.torch_angles_to_ring(resampled_angles)
         encoded_points = self.forward(resampled_points)
-        distance = generative_isometry_util.integrated_point_metric(encoded_points)
+        distance = geometry_util.integrated_point_metric(encoded_points)
         return angular_length, distance
 
     def straight_line_distance(self, start_phases, end_phases, n_points_integrate=50):
-        angular_distances, start_remap, end_remap = generative_isometry_util.minimum_periodic_distance(
+        angular_distances, start_remap, end_remap = geometry_util.minimum_periodic_distance(
             start_phases, end_phases)
         return angular_distances, self.model_length(start_remap, end_remap, n_points_integrate)[1]
 
