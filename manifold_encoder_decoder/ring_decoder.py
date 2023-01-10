@@ -8,7 +8,7 @@ import torch
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print('Using device:', device)
 
-from manifold_encoder_decoder import generative_isometry_util, encoder_decoder_core
+from manifold_encoder_decoder import geometry_util, encoder_decoder_core
 
 # load some manifold data
 data_dir = os.path.join(os.getenv("HOME"), "manifold_test_data/2022-12-12-15-59-35")
@@ -58,7 +58,7 @@ for i in range(n_epochs):
 
     ordered_decoded, _ = torch.sort(decoded_angles, dim=-2)
     model_ring_length = encoder_net.total_length(n_points_length)
-    ordered_points = generative_isometry_util.torch_angles_to_ring(ordered_decoded)
+    ordered_points = geometry_util.torch_angles_to_ring(ordered_decoded)
     decoded_in_order = encoder_net(ordered_points)
     total_euclid_distance = torch.sum(
         torch.sqrt(torch.sum(torch.square(decoded_in_order - torch.roll(decoded_in_order, 1, dims=-2)), dim=-1) + 1e-13),

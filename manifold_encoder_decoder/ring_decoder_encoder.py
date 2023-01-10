@@ -8,7 +8,7 @@ from torch import nn
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print('Using device:', device)
 
-from manifold_encoder_decoder import generative_isometry_util
+from manifold_encoder_decoder import geometry_util
 
 # load some manifold data
 data_dir = os.path.join(os.getenv("HOME"), "manifold_test_data/2022-11-17-13-24-23")
@@ -50,7 +50,7 @@ decoder_layers.append(nn.Linear(int(encoder_hidden_dim / 2), in_dim))
 decoder_net = nn.Sequential(*decoder_layers).to(device)
 
 # this can be used to fit a circle to some points
-circularizer = generative_isometry_util.CircleDistance().to(device)
+circularizer = geometry_util.CircleDistance().to(device)
 
 params = list(encoder_net.parameters()) + list(decoder_net.parameters()) + list(circularizer.parameters())
 opt = torch.optim.Adam(params)
@@ -95,11 +95,11 @@ for _ in range(n_epochs):
     if loss < 0.001:
         iso_loss = True
     if iso_loss:
-        encoded_angles, resampled_encoded_points = generative_isometry_util.resample_points_ring(encoded, n_resample)
-        angular_distance = generative_isometry_util.torch_integrated_angle_metric(encoded_angles)
+        encoded_angles, resampled_encoded_points = geometry_util.resample_points_ring(encoded, n_resample)
+        angular_distance = geometry_util.torch_integrated_angle_metric(encoded_angles)
         normed_angular_distance = angular_distance/torch.mean(angular_distance)
         decoded_resample = decoder_net(resampled_encoded_points)
-        decoder_distance = generative_isometry_util.integrated_point_metric(decoded_resample)
+        decoder_distance = geometry_util.integrated_point_metric(decoded_resample)
         normed_decoder_distance = decoder_distance/torch.mean(decoder_distance)
         distance_cost = torch.sum(torch.square(normed_angular_distance - normed_decoder_distance))/(batch_size * n_points_compare)
         loss += distance_cost
@@ -114,12 +114,12 @@ for _ in range(n_epochs):
 
 with torch.no_grad():
     encoded = encoder_net(torch.from_numpy(data).to(device))
-    encoded_angles, resampled_encoded_points = generative_isometry_util.resample_points_ring(torch.unsqueeze(encoded, 0), n_resample)
-    encoded_distance = generative_isometry_util.torch_integrated_angle_metric(encoded_angles)
+    encoded_angles, resampled_encoded_points = geometry_util.resample_points_ring(torch.unsqueeze(encoded, 0), n_resample)
+    encoded_distance = geometry_util.torch_integrated_angle_metric(encoded_angles)
     circularized = circularizer.circularize(encoded)
     phases = circularizer.phases(encoded)
     decoded = decoder_net(resampled_encoded_points)
-    decoded_distances = generative_isometry_util.integrated_point_metric(decoded)
+    decoded_distances = geometry_util.integrated_point_metric(decoded)
     rat = decoded_distances/encoded_distance
 
 circularized = circularized.cpu().numpy()
