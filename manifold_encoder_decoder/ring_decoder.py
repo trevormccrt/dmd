@@ -11,7 +11,7 @@ print('Using device:', device)
 from manifold_encoder_decoder import geometry_util, encoder_decoder_core
 
 # load some manifold data
-data_dir = os.path.join(os.getenv("HOME"), "manifold_test_data/2022-12-12-15-59-35")
+data_dir = os.path.join(os.getenv("HOME"), "manifold_test_data/noised_3")
 data = np.load(os.path.join(data_dir, "encoded_points.npy"))
 true_phases = None # in general we won't have labels
 # if we have label data we can plot actual vs predicted phase

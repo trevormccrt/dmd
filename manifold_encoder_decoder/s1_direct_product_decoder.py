@@ -5,17 +5,10 @@ import torch
 
 from manifold_encoder_decoder import geometry_util, encoder_decoder_core
 
-if device is None:
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-# load some manifold data
-data_dir = os.path.join(os.getenv("HOME"), "manifold_test_data/torus/2023-01-09-17-05-24")
-data = np.load(os.path.join(data_dir, "encoded_points.npy"))
-
 
 def train(data, manifold_dim, device, encoder_hidden_dim=1500, encoder_n_hidden=1, decoder_hidden_dim=1500,
           decoder_n_hidden=1, integration_resamples=20, n_points_compare=20,
-          batch_size=50, n_training_iterations=3000, loss_stop_thresh=1e-4):
+          batch_size=50, n_training_iterations=3000, loss_stop_thresh=1e-4, decoder_weight=1, order_red_weight=1):
 
     embedded_dim = np.shape(data)[1] # we will give the NN points on a ring in 2D as input
     encoder_net = encoder_decoder_core.AllPeriodicEncoder(embedded_dim, manifold_dim, encoder_hidden_dim, encoder_n_hidden).to(device)
@@ -26,8 +19,8 @@ def train(data, manifold_dim, device, encoder_hidden_dim=1500, encoder_n_hidden=
 
     sample_range = np.arange(start=0, stop=np.shape(data)[0], step=1)
     best_loss = np.inf
-    best_encoder = encoder_net
-    best_decoder = decoder_net
+    best_encoder = copy.deepcopy(encoder_net)
+    best_decoder = copy.deepcopy(decoder_net)
     for i in range(n_training_iterations):
         samples = np.array([data[np.random.choice(sample_range, size=n_points_compare, replace=False), :] for i in range(batch_size)])
         data_samples = torch.tensor(samples, dtype=torch.get_default_dtype()).to(device)
@@ -50,7 +43,7 @@ def train(data, manifold_dim, device, encoder_hidden_dim=1500, encoder_n_hidden=
 
         norm_loss = torch.mean((model_arclengths - euclid_dist)/euclid_dist)
 
-        loss = decoder_loss + distance_cost + norm_loss
+        loss = (decoder_weight * decoder_loss) + distance_cost + (norm_loss * order_red_weight)
         loss.backward()
         opt.step()
 
