@@ -1,6 +1,5 @@
 import copy
 import numpy as np
-import os
 import torch
 
 from manifold_encoder_decoder import geometry_util, encoder_decoder_core
