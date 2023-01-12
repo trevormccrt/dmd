@@ -50,7 +50,7 @@ class AllPeriodicEncoder(nn.Module):
         distance = geometry_util.integrated_point_metric(encoded_points)
         return angular_length, distance
 
-    def straight_line_distance(self, start_phases, end_phases, n_points_integrate=50):
+    def minimum_straight_line_distance(self, start_phases, end_phases, n_points_integrate=50):
         angular_distances, start_remap, end_remap = geometry_util.minimum_periodic_distance(
             start_phases, end_phases)
         return angular_distances, self.model_length(start_remap, end_remap, n_points_integrate)[1]

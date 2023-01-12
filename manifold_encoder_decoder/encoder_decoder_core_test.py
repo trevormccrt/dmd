@@ -17,6 +17,6 @@ def test_periodic_euclid_vs_arclength():
         start_embedded = net(start_points)
         end_embedded = net(end_points)
         euclid_dist = torch.sqrt(torch.sum(torch.square(end_embedded - start_embedded), dim=-1))
-        arclength = net.straight_line_distance(start_phases, end_phases)[1]
+        arclength = net.minimum_straight_line_distance(start_phases, end_phases)[1]
     np.testing.assert_array_less(euclid_dist, arclength)
 
