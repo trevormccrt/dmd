@@ -27,7 +27,7 @@ def train(manifold_dimension, embedding_dimension, device, encoder_hidden_dim=15
         decoding_cost = torch.mean(torch.square(re_encoded_points - sample_points))
 
         rolled_sample_phases = torch.roll(sample_phases, 1, -2)
-        angular_distances, model_distances = encoder_net.straight_line_distance(sample_phases, rolled_sample_phases, integration_resamples)
+        angular_distances, model_distances = encoder_net.minimum_straight_line_distance(sample_phases, rolled_sample_phases, integration_resamples)
         normed_angular_distance = angular_distances / torch.mean(angular_distances)
         normed_model_distance = model_distances / torch.mean(model_distances)
         distance_cost = torch.mean(torch.square(normed_angular_distance - normed_model_distance))
