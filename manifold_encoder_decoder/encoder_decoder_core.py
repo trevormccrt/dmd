@@ -5,23 +5,23 @@ from torch import nn
 from manifold_encoder_decoder import geometry_util
 
 
-def wide_n_deep(input_dimension, output_dimension, n_hidden, hidden_dim):
+def wide_n_deep(input_dimension, output_dimension, n_hidden, hidden_dim, layer_nonlin=nn.Tanh):
     layers = []
     layers.append(nn.Linear(input_dimension, int(hidden_dim / 2)))
-    layers.append(nn.Tanh())
+    layers.append(layer_nonlin())
     for _ in range(n_hidden):
         layers.append(nn.LazyLinear(hidden_dim))
-        layers.append(nn.Tanh())
+        layers.append(layer_nonlin())
     layers.append(nn.Linear(hidden_dim, int(hidden_dim / 2)))
-    layers.append(nn.Tanh())
+    layers.append(layer_nonlin())
     layers.append(nn.Linear(int(hidden_dim / 2), output_dimension))
     return nn.Sequential(*layers)
 
 
 class AllPeriodicDecoder(nn.Module):
-    def __init__(self, encoded_dimension, n_decoded_dimensions, hidden_layer_dimension=1000, n_hidden_layers=1):
+    def __init__(self, encoded_dimension, n_decoded_dimensions, hidden_layer_dimension=1000, n_hidden_layers=1, layer_nonlin=nn.Tanh):
         super().__init__()
-        self.net = wide_n_deep(encoded_dimension, 2 * n_decoded_dimensions, n_hidden_layers, hidden_layer_dimension)
+        self.net = wide_n_deep(encoded_dimension, 2 * n_decoded_dimensions, n_hidden_layers, hidden_layer_dimension, layer_nonlin=nn.Tanh)
         self.n_decoded_dimensions = n_decoded_dimensions
 
     def forward(self, x):
@@ -33,9 +33,9 @@ class AllPeriodicDecoder(nn.Module):
 
 
 class AllPeriodicEncoder(nn.Module):
-    def __init__(self, encoded_dimension, n_decoded_dimensions, hidden_layer_dimension=1000, n_hidden_layers=1):
+    def __init__(self, encoded_dimension, n_decoded_dimensions, hidden_layer_dimension=1000, n_hidden_layers=1, layer_nonlin=nn.Tanh):
         super().__init__()
-        self.net = wide_n_deep(2 * n_decoded_dimensions, encoded_dimension , n_hidden_layers, hidden_layer_dimension)
+        self.net = wide_n_deep(2 * n_decoded_dimensions, encoded_dimension , n_hidden_layers, hidden_layer_dimension, layer_nonlin=nn.Tanh)
         self.n_decoded_dimensions = n_decoded_dimensions
 
     def forward(self, x):
