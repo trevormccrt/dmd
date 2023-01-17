@@ -12,18 +12,7 @@ def decode_encode_cost(decoder, encoder, data):
     return decoded_points, decoded_angles, re_encoded_points, decoder_loss
 
 
-def isometry_cost(encoder, decoded_angles, integration_resamples):
-    rolled_decoded_angles = torch.roll(decoded_angles, 1, dims=-2)
-    angular_distances, model_distances = encoder.minimum_straight_line_distance(decoded_angles,
-                                                                                    rolled_decoded_angles,
-                                                                                    n_points_integrate=integration_resamples)
-    normed_angular_distance = angular_distances / torch.mean(angular_distances)
-    normed_model_distance = model_distances / torch.mean(model_distances)
-    distance_cost = torch.mean(torch.square(normed_angular_distance - normed_model_distance))
-    return distance_cost
-
-
-def order_cost(encoder, re_encoded_points, decoded_angles, integration_resamples):
+def distance_costs(encoder, re_encoded_points, decoded_angles, integration_resamples):
     nearest_angular_distances, nearest_start, nearest_end, nearest_matches = geometry_util.closest_points_periodic(
         decoded_angles)
     nearest_re_encoded = torch.gather(re_encoded_points, -2,
@@ -32,7 +21,12 @@ def order_cost(encoder, re_encoded_points, decoded_angles, integration_resamples
     model_arclengths = \
     encoder.minimum_straight_line_distance(nearest_start, nearest_end, n_points_integrate=integration_resamples)[1]
 
-    return torch.mean((model_arclengths - euclid_dist) / euclid_dist)
+    normed_angular_distance = nearest_angular_distances / torch.mean(nearest_angular_distances)
+    normed_model_distance = model_arclengths / torch.mean(model_arclengths)
+
+    extra_length_cost = torch.mean((model_arclengths - euclid_dist) / euclid_dist)
+    isometry_cost = torch.mean(torch.square(normed_angular_distance - normed_model_distance))
+    return extra_length_cost, isometry_cost
 
 
 def train(data, manifold_dim, device, encoder_hidden_dim=1500, encoder_n_hidden=1, decoder_hidden_dim=1500,
@@ -55,8 +49,7 @@ def train(data, manifold_dim, device, encoder_hidden_dim=1500, encoder_n_hidden=
         data_samples = torch.tensor(samples, dtype=torch.get_default_dtype()).to(device)
         opt.zero_grad()
         decoded_points, decoded_angles, re_encoded_points, decoder_loss = decode_encode_cost(decoder_net, encoder_net, data_samples)
-        distance_cost = isometry_cost(encoder_net, decoded_angles, integration_resamples)
-        norm_loss = order_cost(encoder_net, re_encoded_points, decoded_angles, integration_resamples)
+        norm_loss, distance_cost = distance_costs(encoder_net, re_encoded_points, decoded_angles, integration_resamples)
         loss = (decoder_weight * decoder_loss) + distance_cost + (norm_loss * order_red_weight)
         loss.backward()
         opt.step()

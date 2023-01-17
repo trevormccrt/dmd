@@ -5,6 +5,18 @@ import torch
 from manifold_encoder_decoder import geometry_util, encoder_decoder_core, s1_direct_product_decoder
 
 
+def order_cost(encoder, re_encoded_points, decoded_angles, integration_resamples):
+    nearest_angular_distances, nearest_start, nearest_end, nearest_matches = geometry_util.closest_points_periodic(
+        decoded_angles)
+    nearest_re_encoded = torch.gather(re_encoded_points, -2,
+                                      torch.tile(torch.unsqueeze(nearest_matches, -1), [re_encoded_points.size(-1)]))
+    euclid_dist = torch.sqrt(torch.sum(torch.square(nearest_re_encoded - re_encoded_points), dim=-1) + 1e-13)
+    model_arclengths = \
+    encoder.minimum_straight_line_distance(nearest_start, nearest_end, n_points_integrate=integration_resamples)[1]
+
+    return torch.mean((model_arclengths - euclid_dist) / euclid_dist)
+
+
 def train(data, manifold_dim, device, encoder_hidden_dim=1500, encoder_n_hidden=1, decoder_hidden_dim=1500,
           decoder_n_hidden=1, integration_resamples=20, n_points_compare=20,
           batch_size=50, n_training_iterations=3000, loss_stop_thresh=1e-4, decoder_weight=1, order_red_weight=1, scrambling_weight=1):
@@ -47,7 +59,7 @@ def train(data, manifold_dim, device, encoder_hidden_dim=1500, encoder_n_hidden=
         normed_model_distance = model_distances / torch.mean(model_distances)
         distance_cost = torch.mean(torch.square(normed_angular_distance - normed_model_distance))
 
-        norm_loss = s1_direct_product_decoder.order_cost(encoder_net, re_encoded_points, scrambled_angles, integration_resamples)
+        norm_loss = order_cost(encoder_net, re_encoded_points, scrambled_angles, integration_resamples)
 
         loss = (decoder_weight * decoder_loss) + distance_cost + (norm_loss * order_red_weight) + (scrambling_weight * weight_cost)
         loss.backward()
