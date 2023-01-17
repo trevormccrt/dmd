@@ -37,11 +37,11 @@ def order_cost(encoder, re_encoded_points, decoded_angles, integration_resamples
 
 def train(data, manifold_dim, device, encoder_hidden_dim=1500, encoder_n_hidden=1, decoder_hidden_dim=1500,
           decoder_n_hidden=1, integration_resamples=20, n_points_compare=20,
-          batch_size=50, n_training_iterations=3000, loss_stop_thresh=1e-4, decoder_weight=1, order_red_weight=1, layer_nonlin=torch.nn.Tanh):
+          batch_size=50, n_training_iterations=3000, loss_stop_thresh=1e-4, decoder_weight=1, order_red_weight=1):
 
     embedded_dim = np.shape(data)[1] # we will give the NN points on a ring in 2D as input
-    encoder_net = encoder_decoder_core.AllPeriodicEncoder(embedded_dim, manifold_dim, encoder_hidden_dim, encoder_n_hidden, layer_nonlin=layer_nonlin).to(device)
-    decoder_net = encoder_decoder_core.AllPeriodicDecoder(embedded_dim, manifold_dim, decoder_hidden_dim, decoder_n_hidden, layer_nonlin=layer_nonlin).to(device)
+    encoder_net = encoder_decoder_core.AllPeriodicEncoder(embedded_dim, manifold_dim, encoder_hidden_dim, encoder_n_hidden).to(device)
+    decoder_net = encoder_decoder_core.AllPeriodicDecoder(embedded_dim, manifold_dim, decoder_hidden_dim, decoder_n_hidden).to(device)
 
     params = list(encoder_net.parameters()) + list(decoder_net.parameters())
     opt = torch.optim.Adam(params)
