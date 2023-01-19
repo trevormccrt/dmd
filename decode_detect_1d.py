@@ -18,15 +18,15 @@ def order_cost(encoder, re_encoded_points, decoded_angles, integration_resamples
     return torch.mean((model_arclengths - euclid_dist) / euclid_dist)
 
 
-def train(data, manifold_dim, device, encoder_hidden_dim=1500, encoder_n_hidden=1, decoder_hidden_dim=1500,
+def train(data, n_circular_dimensions, n_linear_dimensions, device, encoder_hidden_dim=1500, encoder_n_hidden=1, decoder_hidden_dim=1500,
           decoder_n_hidden=1, integration_resamples=20, n_points_compare=20,
           batch_size=50, n_training_iterations=3000, loss_stop_thresh=1e-4, decoder_weight=1, order_red_weight=1, scrambling_weight=1):
 
     embedded_dim = np.shape(data)[1] # we will give the NN points on a ring in 2D as input
-    encoder_net = encoder_decoder_core.AllPeriodicEncoder(embedded_dim, manifold_dim, encoder_hidden_dim, encoder_n_hidden).to(device)
-    decoder_net = encoder_decoder_core.AllPeriodicDecoder(embedded_dim, manifold_dim, decoder_hidden_dim, decoder_n_hidden).to(device)
+    encoder_net = encoder_decoder_core.Encoder1D(embedded_dim, n_circular_dimensions, n_linear_dimensions, encoder_hidden_dim, encoder_n_hidden).to(device)
+    decoder_net = encoder_decoder_core.Decoder1D(embedded_dim, n_circular_dimensions, n_linear_dimensions, decoder_hidden_dim, decoder_n_hidden).to(device)
 
-    random_weights = torch.nn.Parameter((torch.ones(manifold_dim) * -4).to(device))
+    random_weights = torch.nn.Parameter((torch.ones(n_circular_dimensions + n_linear_dimensions) * -4).to(device))
     params = list(encoder_net.parameters()) + list(decoder_net.parameters()) + [random_weights]
 
     opt = torch.optim.Adam(params)
@@ -39,16 +39,14 @@ def train(data, manifold_dim, device, encoder_hidden_dim=1500, encoder_n_hidden=
         samples = np.array([data[np.random.choice(sample_range, size=n_points_compare, replace=False), :] for i in range(batch_size)])
         data_samples = torch.tensor(samples, dtype=torch.get_default_dtype()).to(device)
         opt.zero_grad()
-        decoded_points, decoded_angles = decoder_net(data_samples)
+        decoded_angles = decoder_net(data_samples)
         random_shifts = torch.rand(decoded_angles.size()).to(device) * 2 * np.pi
         saturated_weights = torch.sigmoid(random_weights)
-
         weight_cost = -1 * torch.sum(saturated_weights)
         scaled_shifts = random_shifts * saturated_weights
         scrambled_angles = decoded_angles + scaled_shifts
         scrambled_angles = torch.atan2(torch.sin(scrambled_angles), torch.cos(scrambled_angles))
-        scrambled_points = geometry_util.torch_angles_to_ring(scrambled_angles)
-        re_encoded_points = encoder_net(scrambled_points)
+        re_encoded_points = encoder_net(scrambled_angles)
         decoder_loss = torch.mean(torch.square(re_encoded_points - data_samples))
 
         rolled_scrambled_angles = torch.roll(scrambled_angles, 1, dims=-2)
