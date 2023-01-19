@@ -53,6 +53,12 @@ class Encoder1D(nn.Module):
         return angular_length, distance
 
     def minimum_straight_line_distance(self, start_phases, end_phases, n_points_integrate=50):
-        angular_distances, start_remap, end_remap = geometry_util.minimum_periodic_distance(
-            start_phases, end_phases)
-        return angular_distances, self.model_length(start_remap, end_remap, n_points_integrate)[1]
+        _, start_remap, end_remap = geometry_util.minimum_periodic_distance(
+            start_phases[..., :self._circular_stop_idx], end_phases[..., :self._circular_stop_idx])
+        angular_terms = start_remap - end_remap
+        linear_terms = start_phases[..., self._circular_stop_idx:] - end_phases[..., self._circular_stop_idx:]
+        all_distances = torch.cat([angular_terms, linear_terms], dim=-1)
+        all_start = torch.cat([start_remap, start_phases[..., self._circular_stop_idx:]], -1)
+        all_end = torch.cat([end_remap, end_phases[..., self._circular_stop_idx:]], -1)
+        phase_distances = torch.sqrt(torch.sum(torch.square(all_distances), -1) + 1e-13)
+        return phase_distances, self.model_length(all_start, all_end, n_points_integrate)[1]

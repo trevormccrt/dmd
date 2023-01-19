@@ -8,7 +8,7 @@ def test_periodic_euclid_vs_arclength():
     manifold_dim = 6
     embeded_dim = 90
     batch_size = 100
-    net = encoder_decoder_core.Encoder1D(embeded_dim, manifold_dim, 0)
+    net = encoder_decoder_core.Encoder1D(embeded_dim, 3, manifold_dim - 3)
     start_phases = torch.tensor(np.random.uniform(0, 2 * np.pi, (batch_size, manifold_dim)), dtype=torch.get_default_dtype())
     end_phases = torch.tensor(np.random.uniform(0, 2 * np.pi, (batch_size, manifold_dim)), dtype=torch.get_default_dtype())
     with torch.no_grad():
@@ -35,3 +35,23 @@ def test_encode_decode():
     with torch.no_grad():
         re_embed = encoder(phases)
     assert re_embed.size()[-1] == embedded_dimension
+
+
+def test_mixed_distance():
+    embedded_dimension = 12
+    linear_encoder = encoder_decoder_core.Encoder1D(embedded_dimension, 0, 1)
+    circular_encoder = encoder_decoder_core.Encoder1D(embedded_dimension, 1, 0)
+    test_start_phases = torch.tensor(np.zeros((1, 1)) + 0.1, dtype=torch.get_default_dtype())
+    test_end_phases = torch.tensor(np.ones((1, 1)) * 2 * np.pi - 0.1, dtype=torch.get_default_dtype())
+    with torch.no_grad():
+        linear_dist, _ = linear_encoder.minimum_straight_line_distance(test_start_phases, test_end_phases)
+        circular_dist, _ = circular_encoder.minimum_straight_line_distance(test_start_phases, test_end_phases)
+    np.testing.assert_allclose(linear_dist, 2 * np.pi - 0.2, atol=1e-6)
+    np.testing.assert_allclose(circular_dist, 0.2, atol=1e-6)
+
+    mixed_encoder = encoder_decoder_core.Encoder1D(embedded_dimension, 1, 1)
+    test_start_phases = torch.tensor([[0, 0.1], [0.1, 0], [0.1, 0.1]], dtype=torch.get_default_dtype())
+    test_end_phases = torch.tensor([[0, 2 * np.pi - 0.1], [2 * np.pi - 0.1, 0], [2 * np.pi - 0.1, 2 * np.pi - 0.1]], dtype=torch.get_default_dtype())
+    with torch.no_grad():
+        mixed_dist, _ = mixed_encoder.minimum_straight_line_distance(test_start_phases, test_end_phases)
+    np.testing.assert_allclose(mixed_dist, [2 * np.pi - 0.2, 0.2, np.sqrt((2 * np.pi - 0.2) **2 + 0.2**2)], atol=1e-6)
