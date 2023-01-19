@@ -54,16 +54,3 @@ class AllPeriodicEncoder(nn.Module):
         angular_distances, start_remap, end_remap = geometry_util.minimum_periodic_distance(
             start_phases, end_phases)
         return angular_distances, self.model_length(start_remap, end_remap, n_points_integrate)[1]
-
-
-class RingEncoder(AllPeriodicEncoder):
-    def __init__(self, encoded_dimension, hidden_layer_dimension=1000, n_hidden_layers=1):
-        super().__init__(encoded_dimension, 1, hidden_layer_dimension, n_hidden_layers)
-
-    def total_length(self, n_points_integrate=50):
-        total_model_length_start = torch.tensor([0], dtype=torch.get_default_dtype()).to(
-            next(self.net.parameters()).device)
-        total_model_length_end = torch.tensor([2 * np.pi], dtype=torch.get_default_dtype()).to(
-            next(self.net.parameters()).device)
-        return self.model_length(total_model_length_start, total_model_length_end,
-                                 n_points_integrate=n_points_integrate)[1]
