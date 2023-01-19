@@ -55,6 +55,3 @@ def test_mixed_distance():
     with torch.no_grad():
         mixed_dist, _ = mixed_encoder.minimum_straight_line_distance(test_start_phases, test_end_phases)
     np.testing.assert_allclose(mixed_dist, [2 * np.pi - 0.2, 0.2, np.sqrt((2 * np.pi - 0.2) **2 + 0.2**2)], atol=1e-6)
-
-
-test_periodic_euclid_vs_arclength()
