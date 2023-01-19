@@ -5,7 +5,7 @@ import os
 import torch
 
 import geometry_util
-import s1_direct_product_generator
+import generate_1d
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 

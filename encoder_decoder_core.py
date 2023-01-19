@@ -1,4 +1,3 @@
-import numpy as np
 import torch
 from torch import nn
 
@@ -26,7 +25,7 @@ class Decoder1D(nn.Module):
 
     def forward(self, x):
         encoded = self.net(x)
-        circular_outputs = np.reshape(encoded[..., :self._circular_stop_idx], (*encoded.size()[:-1], -1, 2))
+        circular_outputs = torch.reshape(encoded[..., :self._circular_stop_idx], (*encoded.size()[:-1], -1, 2))
         circular_phases = torch.atan2(circular_outputs[..., 1], circular_outputs[..., 0])
         linear_outputs = encoded[..., self._circular_stop_idx:]
         linear_phases = (2 * torch.pi * torch.sigmoid(linear_outputs)) - torch.pi
@@ -49,8 +48,7 @@ class Encoder1D(nn.Module):
     def model_length(self, phases_start, phases_end, n_points_integrate=50):
         angular_length = torch.sum(torch.abs(phases_end - phases_start), dim=-1)
         resampled_angles = torch.moveaxis(geometry_util.torch_linspace(phases_start, phases_end, n_points_integrate), 0, -2)
-        resampled_points = geometry_util.torch_angles_to_ring(resampled_angles)
-        encoded_points = self.forward(resampled_points)
+        encoded_points = self.forward(resampled_angles)
         distance = geometry_util.integrated_point_metric(encoded_points)
         return angular_length, distance
 

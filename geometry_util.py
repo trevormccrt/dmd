@@ -63,3 +63,9 @@ def closest_points_periodic(point_list):
                                                              [list_b.size(-1)])), -2)
     matched_points_b = torch.squeeze(torch.gather(remapped_b_unflat, -2, torch.tile(torch.unsqueeze(torch.unsqueeze(matches,-1), -1), [list_b.size(-1)])), -2)
     return min_distances, matched_points_a, matched_points_b, matches
+
+
+def reference_periodic_phases(phases):
+    phases_refd = phases - phases[0]
+    phases_refd = np.arctan2(np.sin(phases_refd), np.cos(phases_refd))
+    return phases_refd * np.sign(phases_refd[1])

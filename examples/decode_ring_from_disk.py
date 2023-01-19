@@ -3,7 +3,7 @@ import numpy as np
 import os
 import torch
 
-import s1_direct_product_decoder
+import decode_1d
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
