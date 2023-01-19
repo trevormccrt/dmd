@@ -24,7 +24,7 @@ def train(data, manifold_dim, device, encoder_hidden_dim=1500, encoder_n_hidden=
 
     embedded_dim = np.shape(data)[1] # we will give the NN points on a ring in 2D as input
     encoder_net = encoder_decoder_core.AllPeriodicEncoder(embedded_dim, manifold_dim, encoder_hidden_dim, encoder_n_hidden).to(device)
-    decoder_net = encoder_decoder_core.AllPeriodicDecoder(embedded_dim, manifold_dim, decoder_hidden_dim, decoder_n_hidden).to(device)
+    decoder_net = encoder_decoder_core.Decoder1D(embedded_dim, manifold_dim, decoder_hidden_dim, decoder_n_hidden).to(device)
 
     random_weights = torch.nn.Parameter((torch.ones(manifold_dim) * -4).to(device))
     params = list(encoder_net.parameters()) + list(decoder_net.parameters()) + [random_weights]

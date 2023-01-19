@@ -11,8 +11,8 @@ def train(manifold_dimension, embedding_dimension, device, encoder_hidden_dim=15
           batch_size=50, n_training_iterations=3000, loss_stop_thresh=1e-4):
     encoder_net = encoder_decoder_core.AllPeriodicEncoder(embedding_dimension, manifold_dimension, encoder_hidden_dim,
                                                           encoder_n_hidden).to(device)
-    decoder_net = encoder_decoder_core.AllPeriodicDecoder(embedding_dimension, manifold_dimension, decoder_hidden_dim,
-                                                          decoder_n_hidden).to(device)
+    decoder_net = encoder_decoder_core.Decoder1D(embedding_dimension, manifold_dimension, decoder_hidden_dim,
+                                                 decoder_n_hidden).to(device)
 
     params = list(encoder_net.parameters()) + list(decoder_net.parameters())
     opt = torch.optim.Adam(params)

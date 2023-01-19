@@ -1,8 +1,7 @@
 import numpy as np
 import torch
 
-import geometry_util
-import encoder_decoder_core
+import encoder_decoder_core, geometry_util
 
 
 def test_periodic_euclid_vs_arclength():
@@ -20,4 +19,21 @@ def test_periodic_euclid_vs_arclength():
         euclid_dist = torch.sqrt(torch.sum(torch.square(end_embedded - start_embedded), dim=-1))
         arclength = net.minimum_straight_line_distance(start_phases, end_phases)[1]
     np.testing.assert_array_less(euclid_dist, arclength)
+
+
+def test_circular_vs_linear():
+    n_circular_dimensions = 4
+    n_linear_dimensions = 2
+    embedded_dimension = 12
+    decoder = encoder_decoder_core.Decoder1D(embedded_dimension, n_circular_dimensions, n_linear_dimensions)
+    data = torch.tensor(np.random.uniform(-10, 10, (1000, embedded_dimension)), dtype=torch.get_default_dtype())
+    with torch.no_grad():
+        circ_phases, linear_phases = decoder(data)
+    all_phases = torch.concatenate([circ_phases, linear_phases], -1)
+    np.testing.assert_array_less(all_phases, np.pi)
+    np.testing.assert_array_less(-1 * all_phases, np.pi)
+
+
+
+test_circular_vs_linear()
 
