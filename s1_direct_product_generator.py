@@ -9,8 +9,8 @@ import encoder_decoder_core
 def train(manifold_dimension, embedding_dimension, device, encoder_hidden_dim=1500, encoder_n_hidden=1, decoder_hidden_dim=1500,
           decoder_n_hidden=1, integration_resamples=20, n_points_compare=20,
           batch_size=50, n_training_iterations=3000, loss_stop_thresh=1e-4):
-    encoder_net = encoder_decoder_core.AllPeriodicEncoder(embedding_dimension, manifold_dimension, encoder_hidden_dim,
-                                                          encoder_n_hidden).to(device)
+    encoder_net = encoder_decoder_core.Encoder1D(embedding_dimension, manifold_dimension, encoder_hidden_dim,
+                                                 encoder_n_hidden).to(device)
     decoder_net = encoder_decoder_core.Decoder1D(embedding_dimension, manifold_dimension, decoder_hidden_dim,
                                                  decoder_n_hidden).to(device)
 
