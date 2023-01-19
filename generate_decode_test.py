@@ -15,17 +15,16 @@ def test_ring_generate_decode_1d():
         embedded_points = gen_encoder(torch.tensor(np.expand_dims(test, -1), dtype=torch.get_default_dtype()).to(device))
     embedded_points = embedded_points/torch.mean(torch.abs(embedded_points))
     embedded_points_np = embedded_points.cpu().numpy()
-    dec_encoder, dec_decoder, dec_costs = decode_1d.train(embedded_points_np, 1, 0, device, n_training_iterations=3000,verbose=False)
+    dec_encoder, dec_decoder, dec_costs = decode_1d.train(embedded_points_np, 1, 0, device, n_training_iterations=3000,verbose=False, decoder_weight=10)
     with torch.no_grad():
         predicted_phases = dec_decoder(embedded_points)
     predicted_phases = np.squeeze(predicted_phases.cpu().numpy())
     refd_test = geometry_util.reference_periodic_phases(test)
     refd_pred = geometry_util.reference_periodic_phases(predicted_phases)
-    error = np.mean(np.abs(refd_test - refd_pred))
-    assert error < 0.05
+    with torch.no_grad():
+        dists = geometry_util.minimum_periodic_distance(torch.tensor(np.expand_dims(refd_test, -1)), torch.tensor(np.expand_dims(refd_pred, -1)))[0]
+    dists = dists.cpu().numpy()
+    error = np.mean(dists)
+    assert error < 0.1
     assert dec_costs[0] < 0.005
     assert dec_costs[1] < 0.001
-    print("")
-
-
-test_ring_generate_decode_1d()

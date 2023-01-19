@@ -68,4 +68,4 @@ def closest_points_periodic(point_list):
 def reference_periodic_phases(phases):
     phases_refd = phases - phases[0]
     phases_refd = np.arctan2(np.sin(phases_refd), np.cos(phases_refd))
-    return phases_refd * np.sign(phases_refd[1])
+    return phases_refd * np.sign(phases_refd[int(np.shape(phases)[0]/4)])
