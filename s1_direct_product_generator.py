@@ -2,7 +2,8 @@ import copy
 import numpy as np
 import torch
 
-from manifold_encoder_decoder import encoder_decoder_core, geometry_util
+import geometry_util
+import encoder_decoder_core
 
 
 def train(manifold_dimension, embedding_dimension, device, encoder_hidden_dim=1500, encoder_n_hidden=1, decoder_hidden_dim=1500,

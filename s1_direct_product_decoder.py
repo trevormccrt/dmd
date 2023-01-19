@@ -2,7 +2,8 @@ import copy
 import numpy as np
 import torch
 
-from manifold_encoder_decoder import geometry_util, encoder_decoder_core
+import geometry_util
+import encoder_decoder_core
 
 
 def decode_encode_cost(decoder, encoder, data):

@@ -2,7 +2,7 @@ import numpy as np
 import torch
 from torch import nn
 
-from manifold_encoder_decoder import geometry_util
+import geometry_util
 
 
 def wide_n_deep(input_dimension, output_dimension, n_hidden, hidden_dim):

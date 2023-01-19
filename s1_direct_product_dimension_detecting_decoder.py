@@ -2,7 +2,8 @@ import copy
 import numpy as np
 import torch
 
-from manifold_encoder_decoder import geometry_util, encoder_decoder_core, s1_direct_product_decoder
+import geometry_util
+import encoder_decoder_core
 
 
 def order_cost(encoder, re_encoded_points, decoded_angles, integration_resamples):

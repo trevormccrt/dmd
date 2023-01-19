@@ -4,7 +4,8 @@ import numpy as np
 import os
 import torch
 
-from manifold_encoder_decoder import s1_direct_product_generator, geometry_util
+import geometry_util
+import s1_direct_product_generator
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 

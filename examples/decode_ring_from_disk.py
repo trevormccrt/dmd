@@ -3,8 +3,7 @@ import numpy as np
 import os
 import torch
 
-from manifold_encoder_decoder import s1_direct_product_decoder
-
+import s1_direct_product_decoder
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 

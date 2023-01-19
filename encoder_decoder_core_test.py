@@ -1,7 +1,8 @@
 import numpy as np
 import torch
 
-from manifold_encoder_decoder import encoder_decoder_core, geometry_util
+import geometry_util
+import encoder_decoder_core
 
 
 def test_periodic_euclid_vs_arclength():

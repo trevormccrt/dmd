@@ -1,8 +1,7 @@
 import numpy as np
 import torch
 
-from manifold_encoder_decoder import geometry_util
-from manifold_encoder_decoder.geometry_util import torch_linspace, torch_angles_to_ring
+import geometry_util
 
 
 def _integrated_angle_metric(angles):
@@ -17,8 +16,8 @@ def _densely_sample_angles(angles, n_samples):
 
 def _resample_points_ring(points, n_samples):
     angles = torch.atan2(points[:, :, 1], points[:, :, 0])
-    sampled_angles = torch.transpose(torch.transpose(torch_linspace(angles, torch.roll(angles, 1, dims=-1), n_samples), 0, 2), 0, 1)
-    points = torch_angles_to_ring(sampled_angles)
+    sampled_angles = torch.transpose(torch.transpose(geometry_util.torch_linspace(angles, torch.roll(angles, 1, dims=-1), n_samples), 0, 2), 0, 1)
+    points = geometry_util.torch_angles_to_ring(sampled_angles)
     return angles, points
 
 
