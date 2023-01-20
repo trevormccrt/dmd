@@ -74,6 +74,10 @@ class Encoder1D(nn.Module):
         phase_distances = torch.sqrt(torch.sum(torch.square(all_distances), -1) + 1e-13)
         return phase_distances, all_start, all_end
 
+
+    def closest_points_on_manifold(self):
+
+
     def minimum_straight_line_distance(self, start_phases, end_phases, n_points_integrate=50):
         phase_distances, all_start, all_end = self.manifold_distance(start_phases, end_phases)
         return phase_distances, self.model_length(all_start, all_end, n_points_integrate)[1]

@@ -61,7 +61,7 @@ def test_minimum_periodic_dist():
 def closest_points_periodic_test():
     points = torch.from_numpy(np.array([[0, 0.1], [0, 2 * np.pi - 0.1], [0.2, 2 * np.pi - 0.2], [0.2, 0.2]]))
     with torch.no_grad():
-        min_dist, matched_a, matched_b, matches = geometry_util.closest_points_periodic(points)
+        min_dist, matched_a, matched_b, matches = geometry_util.closest_points_periodic_linear(points, 2)
         in_ring = geometry_util.torch_angles_to_ring(points)
         matched_a_ring = geometry_util.torch_angles_to_ring(matched_a)
         matched_b_ring = geometry_util.torch_angles_to_ring(matched_b)
@@ -70,3 +70,35 @@ def closest_points_periodic_test():
     np.testing.assert_allclose(min_dist, [0.2, 0.2, np.sqrt(0.2**2 + 0.1**2), np.sqrt(0.2**2 + 0.1**2)], rtol=1e-6)
     np.testing.assert_allclose(in_ring, matched_a_ring, atol=1e-6)
     np.testing.assert_allclose(matched_b_ring, matches_ring, atol=1e-6)
+
+
+def closet_points_mixed_test():
+    points = torch.from_numpy(np.array([[0.1, 0.1], [0.5, 0.1], [2 * np.pi - 0.1, 0.1],  [0.1, 0.5]]))
+    with torch.no_grad():
+        min_dist, matched_a, matched_b, matches = geometry_util.closest_points_periodic_linear(points, 2)
+        in_ring = geometry_util.torch_angles_to_ring(points)
+        matched_a_ring = geometry_util.torch_angles_to_ring(matched_a)
+        matched_b_ring = geometry_util.torch_angles_to_ring(matched_b)
+        matches_ring = geometry_util.angles_to_ring(torch.gather(points, 0, torch.tile(torch.unsqueeze(matches, -1), [points.size(-1)])))
+    np.testing.assert_allclose(matches, [2, 0, 0, 0])
+    np.testing.assert_allclose(min_dist, [0.2, 0.4, 0.2, 0.4], rtol=1e-6)
+    np.testing.assert_allclose(in_ring, matched_a_ring, atol=1e-6)
+    np.testing.assert_allclose(matched_b_ring, matches_ring, atol=1e-6)
+
+
+def closest_points_linear_test():
+    n_compare = 20
+    batch_size = 5
+    n_dims = 3
+    points = np.random.uniform(-np.pi, np.pi, (batch_size, n_compare, n_dims))
+    with torch.no_grad():
+        min_distances, matched_points_a, matched_points_b, matches = geometry_util.closest_points_periodic_linear(torch.tensor(points), 0)
+    matched_points_a = matched_points_a.numpy()
+    np.testing.assert_allclose(matched_points_a, points)
+    matched_points_b = matched_points_b.numpy()
+    distances = np.sqrt(np.sum(np.square(points - matched_points_b), axis=-1))
+    np.testing.assert_allclose(distances, min_distances)
+    test_dists = np.sqrt(np.sum(np.square(points[0, :, :] - points[0, 0, :]), axis=-1))[1:]
+    np.testing.assert_allclose(min_distances[0 ,0], np.min(test_dists))
+
+closet_points_mixed_test()

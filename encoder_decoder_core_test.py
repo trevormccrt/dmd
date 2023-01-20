@@ -44,8 +44,8 @@ def test_mixed_distance():
     test_start_phases = torch.tensor(np.zeros((1, 1)) + 0.1, dtype=torch.get_default_dtype())
     test_end_phases = torch.tensor(np.ones((1, 1)) * 2 * np.pi - 0.1, dtype=torch.get_default_dtype())
     with torch.no_grad():
-        linear_dist, _ = linear_encoder.minimum_straight_line_distance(test_start_phases, test_end_phases)
-        circular_dist, _ = circular_encoder.minimum_straight_line_distance(test_start_phases, test_end_phases)
+        linear_dist, _, _ = linear_encoder.manifold_distance(test_start_phases, test_end_phases)
+        circular_dist, _, _ = circular_encoder.manifold_distance(test_start_phases, test_end_phases)
     np.testing.assert_allclose(linear_dist, 2 * np.pi - 0.2, atol=1e-6)
     np.testing.assert_allclose(circular_dist, 0.2, atol=1e-6)
 
@@ -53,5 +53,5 @@ def test_mixed_distance():
     test_start_phases = torch.tensor([[0, 0.1], [0.1, 0], [0.1, 0.1]], dtype=torch.get_default_dtype())
     test_end_phases = torch.tensor([[0, 2 * np.pi - 0.1], [2 * np.pi - 0.1, 0], [2 * np.pi - 0.1, 2 * np.pi - 0.1]], dtype=torch.get_default_dtype())
     with torch.no_grad():
-        mixed_dist, _ = mixed_encoder.minimum_straight_line_distance(test_start_phases, test_end_phases)
+        mixed_dist, _, _ = mixed_encoder.manifold_distance(test_start_phases, test_end_phases)
     np.testing.assert_allclose(mixed_dist, [2 * np.pi - 0.2, 0.2, np.sqrt((2 * np.pi - 0.2) **2 + 0.2**2)], atol=1e-6)
