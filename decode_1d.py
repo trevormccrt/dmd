@@ -27,6 +27,9 @@ def distance_costs(encoder, re_encoded_points, decoded_angles, integration_resam
 
     extra_length_cost = torch.mean((model_arclengths - euclid_dist) / euclid_dist)
     isometry_cost = torch.mean(torch.square(normed_angular_distance - normed_model_distance))
+
+    if extra_length_cost < 0:
+        print("")
     return extra_length_cost, isometry_cost
 
 
@@ -57,6 +60,8 @@ def train(data, n_circular_dimensions, n_linear_dimensions, device, encoder_hidd
         loss = (decoder_weight * decoder_loss) + distance_cost + (norm_loss * order_red_weight)
         loss.backward()
         opt.step()
+
+
 
         if loss < best_loss:
             best_loss = loss

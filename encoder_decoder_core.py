@@ -21,29 +21,40 @@ class Decoder1D(nn.Module):
     def __init__(self, encoded_dimension, n_circular_dimensions, n_linear_dimensions, hidden_layer_dimension=1000, n_hidden_layers=1):
         super().__init__()
         self._circular_stop_idx = 2 * n_circular_dimensions
-        self.net = wide_n_deep(encoded_dimension, self._circular_stop_idx + n_linear_dimensions, n_hidden_layers, hidden_layer_dimension)
+        self.net = wide_n_deep(encoded_dimension, self._circular_stop_idx + 2 * n_linear_dimensions, n_hidden_layers, hidden_layer_dimension)
 
     def forward(self, x):
         encoded = self.net(x)
         circular_outputs = torch.reshape(encoded[..., :self._circular_stop_idx], (*encoded.size()[:-1], -1, 2))
         circular_phases = torch.atan2(circular_outputs[..., 1], circular_outputs[..., 0])
         linear_outputs = encoded[..., self._circular_stop_idx:]
-        linear_phases = (2 * torch.pi * torch.sigmoid(linear_outputs)) - torch.pi
+        linear_outputs = torch.reshape(linear_outputs, (*linear_outputs.size()[:-1], -1, 2))
+        linear_phases = torch.pi * torch.cos(torch.atan2(linear_outputs[..., 1], linear_outputs[..., 0]))
         return torch.concatenate([circular_phases, linear_phases], -1)
 
 
 class Encoder1D(nn.Module):
-    def __init__(self, encoded_dimension, n_circular_dimensions, n_linear_dimensions, hidden_layer_dimension=1000, n_hidden_layers=1):
+    def __init__(self, encoded_dimension, n_circular_dimensions, n_linear_dimensions, hidden_layer_dimension=1000,
+                 n_hidden_layers=1, regularize_latent_space=False):
         super().__init__()
         self._circular_stop_idx = n_circular_dimensions
-        self.net = wide_n_deep((2 * n_circular_dimensions) + n_linear_dimensions, encoded_dimension, n_hidden_layers, hidden_layer_dimension)
+        net_out_dim = encoded_dimension
+        if regularize_latent_space:
+            net_out_dim += 1
+        self.net = wide_n_deep((2 * n_circular_dimensions) + n_linear_dimensions, net_out_dim, n_hidden_layers, hidden_layer_dimension)
+        self.regularizing = regularize_latent_space
 
     def forward(self, x):
         circular_phases = x[..., :self._circular_stop_idx]
         circular_points = geometry_util.torch_angles_to_ring(circular_phases)
         flat_circular_points = torch.reshape(circular_points, (*circular_phases.size()[:-1], -1))
         linear_phases = x[..., self._circular_stop_idx:]
-        return self.net(torch.concatenate([flat_circular_points, linear_phases], -1))
+        out = self.net(torch.concatenate([flat_circular_points, linear_phases], -1))
+        if self.regularizing:
+            norms = torch.sqrt(torch.sum(torch.square(out), -1) + 1e-13)
+            out = torch.einsum("...k, ... -> ...k", out, 1/norms)
+            return out[..., :-1]
+        return out
 
     def model_length(self, phases_start, phases_end, n_points_integrate=50):
         angular_length = torch.sum(torch.abs(phases_end - phases_start), dim=-1)

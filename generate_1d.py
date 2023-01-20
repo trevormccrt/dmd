@@ -6,11 +6,18 @@ import geometry_util
 import encoder_decoder_core
 
 
+def encode_decode_cost(encoder_net, decoder_net, sample_phases):
+    embedded_points = encoder_net(sample_phases)
+    re_encoded_phases = decoder_net(embedded_points)
+    decoding_cost = torch.mean(geometry_util.minimum_periodic_distance(sample_phases, re_encoded_phases)[0])
+    return embedded_points, re_encoded_phases, decoding_cost
+
+
 def train(n_circular_dimensions, n_linear_dimensions, embedding_dimension, device, encoder_hidden_dim=1500, encoder_n_hidden=1, decoder_hidden_dim=1500,
           decoder_n_hidden=1, integration_resamples=20, n_points_compare=20,
           batch_size=50, n_training_iterations=3000, loss_stop_thresh=1e-4, verbose=True):
     encoder_net = encoder_decoder_core.Encoder1D(embedding_dimension, n_circular_dimensions, n_linear_dimensions, encoder_hidden_dim,
-                                                 encoder_n_hidden).to(device)
+                                                 encoder_n_hidden, regularize_latent_space=False).to(device)
     decoder_net = encoder_decoder_core.Decoder1D(embedding_dimension, n_circular_dimensions, n_linear_dimensions, decoder_hidden_dim,
                                                  decoder_n_hidden).to(device)
 
@@ -23,10 +30,7 @@ def train(n_circular_dimensions, n_linear_dimensions, embedding_dimension, devic
     best_costs = np.array([np.inf, np.inf])
     for i in range(n_training_iterations):
         sample_phases = torch.tensor(np.random.uniform(-np.pi, np.pi, (batch_size, n_points_compare, n_circular_dimensions + n_linear_dimensions)), dtype=torch.get_default_dtype()).to(device)
-        embedded_points = encoder_net(sample_phases)
-        re_encoded_phases = decoder_net(embedded_points)
-        decoding_cost = torch.mean(geometry_util.minimum_periodic_distance(sample_phases, re_encoded_phases)[0])
-
+        embedded_points, re_encoded_phases, decoding_cost = encode_decode_cost(encoder_net, decoder_net, sample_phases)
         rolled_sample_phases = torch.roll(sample_phases, 1, -2)
         angular_distances, model_distances = encoder_net.minimum_straight_line_distance(sample_phases, rolled_sample_phases, integration_resamples)
         normed_angular_distance = angular_distances / torch.mean(angular_distances)
