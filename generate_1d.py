@@ -9,7 +9,7 @@ import encoder_decoder_core
 def encode_decode_cost(encoder_net, decoder_net, sample_phases):
     embedded_points = encoder_net(sample_phases)
     re_encoded_phases = decoder_net(embedded_points)
-    decoding_cost = torch.mean(geometry_util.minimum_periodic_distance(sample_phases, re_encoded_phases)[0])
+    decoding_cost = torch.mean(encoder_net.manifold_distance(sample_phases, re_encoded_phases)[0])
     return embedded_points, re_encoded_phases, decoding_cost
 
 
