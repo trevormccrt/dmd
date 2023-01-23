@@ -76,14 +76,11 @@ class Encoder1D(nn.Module):
         sorted_order = torch.argsort(distances, dim=-1)
         matches = sorted_order[..., 1]
         min_distances = torch.squeeze(torch.gather(distances, -1, torch.unsqueeze(matches, -1)), dim=-1)
-        matched_points_a = torch.squeeze(torch.gather(list_a, -2,
-                                                      torch.tile(torch.unsqueeze(torch.unsqueeze(matches, -1), -1),
-                                                                 [list_b.size(-1)])), -2)
         matched_points_b = torch.squeeze(torch.gather(list_b, -2,
                                                       torch.tile(torch.unsqueeze(torch.unsqueeze(matches, -1), -1),
                                                                  [list_b.size(-1)])), -2)
 
-        return min_distances, matched_points_a, matched_points_b, matches
+        return min_distances, matched_points_b, matches
 
     def minimum_straight_line_distance(self, start_phases, end_phases, n_points_integrate=50):
         circular_start_phases = start_phases[..., :self.n_circular_dimensions]
