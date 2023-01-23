@@ -14,13 +14,13 @@ def decode_encode_cost(decoder, encoder, data):
 
 
 def distance_costs(encoder, re_encoded_points, decoded_angles, integration_resamples):
-    nearest_angular_distances, nearest_start, nearest_end, nearest_matches = geometry_util.closest_points_periodic(
+    nearest_angular_distances, nearest_end, nearest_matches = geometry_util.closest_points_periodic(
         decoded_angles)
     nearest_re_encoded = torch.gather(re_encoded_points, -2,
                                       torch.tile(torch.unsqueeze(nearest_matches, -1), [re_encoded_points.size(-1)]))
     euclid_dist = torch.sqrt(torch.sum(torch.square(nearest_re_encoded - re_encoded_points), dim=-1) + 1e-13)
     model_arclengths = \
-    encoder.minimum_straight_line_distance(nearest_start, nearest_end, n_points_integrate=integration_resamples)[1]
+    encoder.minimum_straight_line_distance(decoded_angles, nearest_end, n_points_integrate=integration_resamples)[1]
 
     normed_angular_distance = nearest_angular_distances / torch.mean(nearest_angular_distances)
     normed_model_distance = model_arclengths / torch.mean(model_arclengths)

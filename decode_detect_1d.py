@@ -7,13 +7,13 @@ import encoder_decoder_core
 
 
 def order_cost(encoder, re_encoded_points, decoded_angles, integration_resamples):
-    nearest_angular_distances, nearest_start, nearest_end, nearest_matches = geometry_util.closest_points_periodic(
+    nearest_angular_distances, nearest_end, nearest_matches = geometry_util.closest_points_periodic(
         decoded_angles)
     nearest_re_encoded = torch.gather(re_encoded_points, -2,
                                       torch.tile(torch.unsqueeze(nearest_matches, -1), [re_encoded_points.size(-1)]))
     euclid_dist = torch.sqrt(torch.sum(torch.square(nearest_re_encoded - re_encoded_points), dim=-1) + 1e-13)
     model_arclengths = \
-    encoder.minimum_straight_line_distance(nearest_start, nearest_end, n_points_integrate=integration_resamples)[1]
+    encoder.minimum_straight_line_distance(decoded_angles, nearest_end, n_points_integrate=integration_resamples)[1]
 
     return torch.mean((model_arclengths - euclid_dist) / euclid_dist)
 
@@ -50,10 +50,10 @@ def train(data, n_circular_dimensions, n_linear_dimensions, device, encoder_hidd
         decoder_loss = torch.mean(torch.square(re_encoded_points - data_samples))
 
         rolled_scrambled_angles = torch.roll(scrambled_angles, 1, dims=-2)
-        angular_distances, start_remap, end_remap = geometry_util.minimum_periodic_distance(
+        angular_distances, end_remap = geometry_util.minimum_periodic_distance(
             scrambled_angles, rolled_scrambled_angles)
-        angular_distances = torch.sqrt(1e-13 + torch.sum(torch.square((start_remap - end_remap) * (1 - saturated_weights)), dim=-1))
-        model_distances = encoder_net.model_length(start_remap, end_remap, integration_resamples)[1]
+        angular_distances = torch.sqrt(1e-13 + torch.sum(torch.square((scrambled_angles - end_remap) * (1 - saturated_weights)), dim=-1))
+        model_distances = encoder_net.model_length(scrambled_angles, end_remap, integration_resamples)[1]
         normed_angular_distance = angular_distances / torch.mean(angular_distances)
         normed_model_distance = model_distances / torch.mean(model_distances)
         distance_cost = torch.mean(torch.square(normed_angular_distance - normed_model_distance))
