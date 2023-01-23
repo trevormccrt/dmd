@@ -61,13 +61,13 @@ def test_decode_circle():
 
 
 def test_decode_line():
-    np.random.seed(234234)
-    torch.manual_seed(123144)
+    #np.random.seed(234234)
+    #torch.manual_seed(123144)
     line_phases = np.linspace(start=-np.pi, stop=np.pi, num=200)
     line_points = np.zeros((len(line_phases), 2))
     line_points[:, 0] = line_phases
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    dec_encoder, dec_decoder, dec_costs = decode_1d.train(line_points, 0, 1, device, n_training_iterations=2000,
+    dec_encoder, dec_decoder, dec_costs = decode_1d.train(line_points, 0, 1, device, n_training_iterations=1000,
                                                           verbose=True, integration_resamples=30)
     #assert dec_costs[0] < 0.001
     #assert dec_costs[1] < 0.001
@@ -77,8 +77,18 @@ def test_decode_line():
     predicted_phases = np.squeeze(predicted_phases.cpu().numpy())
     dec_error = np.mean(np.abs(predicted_phases - line_phases))
 
-    random_start_phases = np.random.uniform(0, 2 * np.pi, (20, 1))
-    random_end_phases = np.random.uniform(0, 2 * np.pi, (20, 1))
+
+    with torch.no_grad():
+        test_embedding = dec_encoder(torch.tensor(np.expand_dims(line_phases, -1), dtype=torch.get_default_dtype()).to(device))
+    test_embedding = test_embedding.cpu().numpy()
+
+    import matplotlib.pyplot as plt
+    fig, axs = plt.subplots()
+    axs.scatter(line_points[:, 0], line_points[:, 1])
+    axs.plot(test_embedding[:, 0], test_embedding[:, 1])
+    plt.show()
+    random_start_phases = np.random.uniform(-np.pi, np.pi, (20, 1))
+    random_end_phases = np.random.uniform(-np.pi, np.pi, (20, 1))
     with torch.no_grad():
         ang_distances, arclength = dec_encoder.model_length(torch.tensor(random_start_phases, dtype=torch.get_default_dtype()).to(device),
                                              torch.tensor(random_end_phases, dtype=torch.get_default_dtype()).to(device))

@@ -17,7 +17,7 @@ def train(n_circular_dimensions, n_linear_dimensions, embedding_dimension, devic
           decoder_n_hidden=1, integration_resamples=20, n_points_compare=20,
           batch_size=50, n_training_iterations=3000, loss_stop_thresh=1e-4, verbose=True):
     encoder_net = encoder_decoder_core.Encoder1D(embedding_dimension, n_circular_dimensions, n_linear_dimensions, encoder_hidden_dim,
-                                                 encoder_n_hidden, regularize_latent_space=False).to(device)
+                                                 encoder_n_hidden, regularize_latent_space=True).to(device)
     decoder_net = encoder_decoder_core.Decoder1D(embedding_dimension, n_circular_dimensions, n_linear_dimensions, decoder_hidden_dim,
                                                  decoder_n_hidden).to(device)
 

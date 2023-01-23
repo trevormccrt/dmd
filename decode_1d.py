@@ -14,7 +14,7 @@ def decode_encode_cost(decoder, encoder, data):
 
 
 def distance_costs(encoder, re_encoded_points, decoded_angles, integration_resamples):
-    nearest_angular_distances, nearest_start, nearest_end, nearest_matches = geometry_util.closest_points_periodic(
+    nearest_angular_distances, nearest_start, nearest_end, nearest_matches = encoder.closest_points_on_manifold(
         decoded_angles)
     nearest_re_encoded = torch.gather(re_encoded_points, -2,
                                       torch.tile(torch.unsqueeze(nearest_matches, -1), [re_encoded_points.size(-1)]))
@@ -27,9 +27,6 @@ def distance_costs(encoder, re_encoded_points, decoded_angles, integration_resam
 
     extra_length_cost = torch.mean((model_arclengths - euclid_dist) / euclid_dist)
     isometry_cost = torch.mean(torch.square(normed_angular_distance - normed_model_distance))
-
-    if extra_length_cost < 0:
-        print("")
     return extra_length_cost, isometry_cost
 
 
@@ -61,8 +58,6 @@ def train(data, n_circular_dimensions, n_linear_dimensions, device, encoder_hidd
         loss.backward()
         opt.step()
 
-
-
         if loss < best_loss:
             best_loss = loss
             best_encoder = copy.deepcopy(encoder_net)
@@ -71,7 +66,7 @@ def train(data, n_circular_dimensions, n_linear_dimensions, device, encoder_hidd
                                    distance_cost.cpu().detach().numpy(),
                                    norm_loss.cpu().detach().numpy()])
             if verbose:
-                print("iteration: {}, decoding loss: {}, distance cost: {}, order reduction: {}".format(i, decoder_loss, distance_cost, norm_loss))
+                print("iteration: {}, decoding loss: {}, distance cost: {}, order reduction: {}, extrapolation: {}".format(i, decoder_loss, distance_cost, norm_loss, extrapolation_cost))
 
         if loss < loss_stop_thresh:
             break

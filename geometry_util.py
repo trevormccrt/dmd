@@ -44,6 +44,25 @@ def minimum_periodic_distance(point_list_1, point_list_2):
     return total_min_dists, remapped_1, remapped_2
 
 
+def minimum_euclidian_distance(points_a, points_b):
+    point_list_a = torch.swapaxes(points_a, -2, -1)
+    point_list_b = torch.swapaxes(points_b, -2, -1)
+    n_points_compare = point_list_a.size(-1)
+    expanded_list_a = torch.moveaxis(torch.tile(torch.unsqueeze(point_list_a, -1), [n_points_compare]), -3, -1)
+    expanded_list_b = torch.moveaxis(torch.tile(torch.unsqueeze(point_list_b, -2), [n_points_compare, 1]), -3, -1)
+    distances = torch.sqrt(torch.sum(torch.square(expanded_list_a - expanded_list_b), dim=-1) + 1e-13)
+    sorted_order = torch.argsort(distances, dim=-1)
+    matches = sorted_order[..., 1]
+    min_distances = torch.squeeze(torch.gather(distances, -1, torch.unsqueeze(matches, -1)), dim=-1)
+    matched_points_a = torch.squeeze(torch.gather(expanded_list_a, -2,
+                                                  torch.tile(torch.unsqueeze(torch.unsqueeze(matches, -1), -1),
+                                                             [expanded_list_a.size(-1)])), -2)
+    matched_points_b = torch.squeeze(torch.gather(expanded_list_b, -2,
+                                                  torch.tile(torch.unsqueeze(torch.unsqueeze(matches, -1), -1),
+                                                             [expanded_list_b.size(-1)])), -2)
+    return min_distances, matched_points_a, matched_points_b, matches
+
+
 def closest_points_periodic(point_list):
     point_list = torch.swapaxes(point_list, -2, -1)
     n_points_compare = point_list.size(-1)
@@ -63,55 +82,6 @@ def closest_points_periodic(point_list):
                                                              [list_b.size(-1)])), -2)
     matched_points_b = torch.squeeze(torch.gather(remapped_b_unflat, -2, torch.tile(torch.unsqueeze(torch.unsqueeze(matches,-1), -1), [list_b.size(-1)])), -2)
     return min_distances, matched_points_a, matched_points_b, matches
-
-
-def closest_points_linear(point_list):
-    point_list = torch.swapaxes(point_list, -2, -1)
-    n_points_compare = point_list.size(-1)
-    list_a = torch.moveaxis(torch.tile(torch.unsqueeze(point_list, -1), [n_points_compare]), -3, -1)
-    list_b = torch.moveaxis(torch.tile(torch.unsqueeze(point_list, -2), [n_points_compare, 1]), -3, -1)
-    distances = torch.sqrt(torch.sum(torch.square(list_a - list_b), dim=-1) + 1e-13)
-    sorted_order = torch.argsort(distances, dim=-1)
-    matches = sorted_order[..., 1]
-    min_distances = torch.squeeze(torch.gather(distances, -1, torch.unsqueeze(matches, -1)), dim=-1)
-    matched_points = torch.gather(torch.swapaxes(point_list, -2, -1), -2, torch.tile(torch.unsqueeze(matches, -1), [point_list.size(-2)]))
-    return min_distances, matched_points, matches
-
-
-def closest_points_periodic_linear(point_list, n_circular_dimensions):
-    point_list = torch.swapaxes(point_list, -2, -1)
-    n_points_compare = point_list.size(-1)
-    periodic_phases = point_list[..., :n_circular_dimensions, :]
-    linear_phases = point_list[..., n_circular_dimensions:, :]
-
-    list_a_periodic = torch.moveaxis(torch.tile(torch.unsqueeze(periodic_phases, -1), [n_points_compare]), -3, -1)
-    list_b_periodic = torch.moveaxis(torch.tile(torch.unsqueeze(periodic_phases, -2), [n_points_compare, 1]), -3, -1)
-    list_a_flat = torch.flatten(list_a_periodic, end_dim=-2)
-    list_b_flat = torch.flatten(list_b_periodic, end_dim=-2)
-    _, remapped_a, remapped_b = minimum_periodic_distance(list_a_flat, list_b_flat)
-    remapped_a_unflat = torch.reshape(remapped_a, list_a_periodic.size())
-    remapped_b_unflat = torch.reshape(remapped_b, list_b_periodic.size())
-
-    list_a_linear = torch.moveaxis(torch.tile(torch.unsqueeze(linear_phases, -1), [n_points_compare]), -3, -1)
-    list_b_linear = torch.moveaxis(torch.tile(torch.unsqueeze(linear_phases, -2), [n_points_compare, 1]), -3, -1)
-
-    list_a = torch.concatenate([remapped_a_unflat, list_a_linear], dim=-1)
-    list_b = torch.concatenate([remapped_b_unflat, list_b_linear], dim=-1)
-    distances = torch.sqrt(torch.sum(torch.square(list_a - list_b), dim=-1) + 1e-13)
-
-
-    sorted_order = torch.argsort(distances, dim=-1)
-    matches = sorted_order[..., 1]
-    min_distances = torch.squeeze(torch.gather(distances, -1, torch.unsqueeze(matches, -1)), dim=-1)
-    matched_points_a = torch.squeeze(torch.gather(list_a, -2,
-                                                  torch.tile(torch.unsqueeze(torch.unsqueeze(matches, -1), -1),
-                                                             [list_b.size(-1)])), -2)
-    matched_points_b = torch.squeeze(torch.gather(list_b, -2,
-                                                  torch.tile(torch.unsqueeze(torch.unsqueeze(matches, -1), -1),
-                                                             [list_b.size(-1)])), -2)
-
-    return min_distances, matched_points_a, matched_points_b, matches
-
 
 
 def reference_periodic_phases(phases):
