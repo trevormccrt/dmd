@@ -55,3 +55,50 @@ def test_mixed_distance():
     with torch.no_grad():
         mixed_dist, _ = mixed_encoder.minimum_straight_line_distance(test_start_phases, test_end_phases)
     np.testing.assert_allclose(mixed_dist, [2 * np.pi - 0.2, 0.2, np.sqrt((2 * np.pi - 0.2) **2 + 0.2**2)], atol=1e-6)
+
+
+def test_closest_points_periodic():
+    encoder = encoder_decoder_core.Encoder1D(12, 2, 0)
+    points = torch.from_numpy(np.array([[0, 0.1], [0, 2 * np.pi - 0.1], [0.2, 2 * np.pi - 0.2], [0.2, 0.2]]))
+    with torch.no_grad():
+        min_dist, matched_a, matched_b, matches = encoder.closest_points_on_manifold(points)
+        in_ring = geometry_util.torch_angles_to_ring(points)
+        matched_a_ring = geometry_util.torch_angles_to_ring(matched_a)
+        matched_b_ring = geometry_util.torch_angles_to_ring(matched_b)
+        matches_ring = geometry_util.angles_to_ring(torch.gather(points, 0, torch.tile(torch.unsqueeze(matches, -1), [points.size(-1)])))
+    np.testing.assert_allclose(matches, [1, 0, 1, 0])
+    np.testing.assert_allclose(min_dist, [0.2, 0.2, np.sqrt(0.2**2 + 0.1**2), np.sqrt(0.2**2 + 0.1**2)], rtol=1e-6)
+    np.testing.assert_allclose(in_ring, matched_a_ring, atol=1e-6)
+    np.testing.assert_allclose(matched_b_ring, matches_ring, atol=1e-6)
+
+
+def test_closet_points_mixed():
+    encoder = encoder_decoder_core.Encoder1D(12, 1, 1)
+    points = torch.from_numpy(np.array([[0.1, 0.1], [0.5, 0.1], [2 * np.pi - 0.1, 0.1],  [0.1, 0.5], [0.1, 2 * np.pi - 0.1], [0.5, 2 * np.pi - 0.1]]))
+    with torch.no_grad():
+        min_dist, matched_a, matched_b, matches = encoder.closest_points_on_manifold(points)
+        in_ring = geometry_util.torch_angles_to_ring(points)
+        matched_a_ring = geometry_util.torch_angles_to_ring(matched_a)
+        matched_b_ring = geometry_util.torch_angles_to_ring(matched_b)
+        matches_ring = geometry_util.angles_to_ring(torch.gather(points, 0, torch.tile(torch.unsqueeze(matches, -1), [points.size(-1)])))
+    np.testing.assert_allclose(matches, [2, 0, 0, 0, 5, 4])
+    np.testing.assert_allclose(min_dist, [0.2, 0.4, 0.2, 0.4, 0.4, 0.4], rtol=1e-6)
+    np.testing.assert_allclose(in_ring, matched_a_ring, atol=1e-6)
+    np.testing.assert_allclose(matched_b_ring, matches_ring, atol=1e-6)
+
+
+def test_closest_points_linear():
+    batch_size = 5
+    n_compare = 10
+    ndim = 3
+    encoder = encoder_decoder_core.Encoder1D(12, 0, ndim)
+    points = np.random.uniform(-np.pi, np.pi, (batch_size, n_compare, ndim))
+    with torch.no_grad():
+        min_distances, matched_points_a, matched_points_b, matches = encoder.closest_points_on_manifold(torch.tensor(points))
+    matched_points_a = matched_points_a.numpy()
+    np.testing.assert_allclose(matched_points_a, points)
+    matched_points_b = matched_points_b.numpy()
+    distances = np.sqrt(np.sum(np.square(points - matched_points_b), axis=-1))
+    np.testing.assert_allclose(distances, min_distances)
+    test_dists = np.sqrt(np.sum(np.square(points[0, :, :] - points[0, 0, :]), axis=-1))[1:]
+    np.testing.assert_allclose(min_distances[0 ,0], np.min(test_dists))
