@@ -5,6 +5,8 @@ import generate_1d, decode_1d, geometry_util
 
 
 def test_ring_generate_decode_1d():
+    np.random.seed(12312)
+    torch.manual_seed(56433)
     embed_dim = 12
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     gen_encoder, gen_decoder, gen_costs = generate_1d.train(1, 0, embed_dim, device, n_training_iterations=3000, verbose=False)
@@ -28,3 +30,33 @@ def test_ring_generate_decode_1d():
     assert error < 0.1
     assert dec_costs[0] < 0.005
     assert dec_costs[1] < 0.001
+
+
+def test_decode_circle():
+    np.random.seed(234234)
+    torch.manual_seed(123144)
+    circle_phases = np.linspace(start=0, stop=2 * np.pi, num=200)
+    circle_points = geometry_util.angles_to_ring(circle_phases)
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    dec_encoder, dec_decoder, dec_costs = decode_1d.train(circle_points, 1, 0, device, n_training_iterations=2000,
+                                                          verbose=False, integration_resamples=30)
+    assert dec_costs[0] < 0.001
+    assert dec_costs[1] < 0.001
+
+    with torch.no_grad():
+        predicted_phases = dec_decoder(torch.tensor(circle_points, dtype=torch.get_default_dtype()).to(device))
+    predicted_phases = np.squeeze(predicted_phases.cpu().numpy())
+    refd_test = geometry_util.reference_periodic_phases(circle_phases)
+    refd_pred = geometry_util.reference_periodic_phases(predicted_phases)
+    dec_error = np.mean(np.abs(refd_test - refd_pred))
+
+    random_start_phases = np.random.uniform(0, 2 * np.pi, (20, 1))
+    random_end_phases = np.random.uniform(0, 2 * np.pi, (20, 1))
+    with torch.no_grad():
+        ang_distances, arclength = dec_encoder.model_length(torch.tensor(random_start_phases, dtype=torch.get_default_dtype()).to(device),
+                                             torch.tensor(random_end_phases, dtype=torch.get_default_dtype()).to(device))
+    ang_distances = ang_distances.cpu().numpy()
+    arclength = arclength.cpu().numpy()
+    dist_error = np.mean(np.abs(ang_distances - arclength))
+    assert dec_error < 0.03
+    assert dist_error < 0.03
