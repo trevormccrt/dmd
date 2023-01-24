@@ -2,7 +2,6 @@ import copy
 import numpy as np
 import torch
 
-import geometry_util
 import encoder_decoder_core
 
 
@@ -14,7 +13,7 @@ def decode_encode_cost(decoder, encoder, data):
 
 
 def distance_costs(encoder, re_encoded_points, decoded_angles, integration_resamples):
-    nearest_angular_distances, nearest_end, nearest_matches = geometry_util.closest_points_periodic(
+    nearest_angular_distances, nearest_end, nearest_matches = encoder.closest_points_on_manifold(
         decoded_angles)
     nearest_re_encoded = torch.gather(re_encoded_points, -2,
                                       torch.tile(torch.unsqueeze(nearest_matches, -1), [re_encoded_points.size(-1)]))

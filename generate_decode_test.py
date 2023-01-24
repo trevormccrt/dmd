@@ -60,3 +60,39 @@ def test_decode_circle():
     dist_error = np.mean(np.abs(ang_distances - arclength))
     assert dec_error < 0.03
     assert dist_error < 0.03
+
+
+def test_decode_line():
+    np.random.seed(234235)
+    torch.manual_seed(1233144)
+    line_phases = np.linspace(start=-np.pi, stop=np.pi, num=200)
+    line_points = np.zeros((len(line_phases), 2))
+    line_points[:, 0] = line_phases
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    dec_encoder, dec_decoder, dec_costs = decode_1d.train(line_points, 0, 1, device, n_training_iterations=1500,
+                                                          verbose=True, integration_resamples=30)
+    assert dec_costs[0] < 0.001
+    assert dec_costs[1] < 0.001
+
+    with torch.no_grad():
+        predicted_phases = dec_decoder(torch.tensor(line_points, dtype=torch.get_default_dtype()).to(device))
+    predicted_phases = np.squeeze(predicted_phases.cpu().numpy())
+    scale_factor = 2 * np.pi/(np.max(predicted_phases) - np.min(predicted_phases))
+    normed_predicted_phases = scale_factor * (predicted_phases - np.mean(predicted_phases))
+    normed_predicted_phases = -1 * np.sign(normed_predicted_phases)[0] * normed_predicted_phases
+    dec_error = np.mean(np.abs(normed_predicted_phases - line_phases))
+
+    with torch.no_grad():
+        test_embedding = dec_encoder(torch.tensor(np.expand_dims(line_phases, -1), dtype=torch.get_default_dtype()).to(device))
+    test_embedding = test_embedding.cpu().numpy()
+
+    random_start_phases = np.random.uniform(np.min(predicted_phases), np.max(predicted_phases), (20, 1))
+    random_end_phases = np.random.uniform(np.min(predicted_phases), np.max(predicted_phases), (20, 1))
+    with torch.no_grad():
+        ang_distances, arclength = dec_encoder.model_length(torch.tensor(random_start_phases, dtype=torch.get_default_dtype()).to(device),
+                                             torch.tensor(random_end_phases, dtype=torch.get_default_dtype()).to(device))
+    ang_distances = ang_distances.cpu().numpy()
+    arclength = arclength.cpu().numpy()
+    dist_error = np.mean(np.abs(ang_distances * scale_factor - arclength))
+    assert dec_error < 0.05
+    assert dist_error < 0.05
