@@ -25,11 +25,10 @@ class Decoder1D(nn.Module):
 
     def forward(self, x):
         encoded = self.net(x)
-        circular_outputs = torch.reshape(encoded[..., :self._circular_stop_idx], (*encoded.size()[:-1], -1, 2))
-        circular_phases = torch.atan2(circular_outputs[..., 1], circular_outputs[..., 0])
-        linear_outputs = encoded[..., self._circular_stop_idx:]
-        linear_phases = (2 * torch.pi * torch.sigmoid(linear_outputs)) - torch.pi
-        return torch.concatenate([circular_phases, linear_phases], -1)
+        encoded_circular = encoded[..., :self._circular_stop_idx]
+        encoded_linear = encoded[..., self._circular_stop_idx:]
+        circular_outputs = torch.reshape(encoded_circular, (*encoded_circular.size()[:-1], -1, 2))
+        return torch.concatenate([torch.atan2(circular_outputs[..., 1], circular_outputs[..., 0]), encoded_linear], dim=-1)
 
 
 class Encoder1D(nn.Module):
