@@ -28,7 +28,7 @@ class Decoder1D(nn.Module):
         encoded_circular = encoded[..., :self._circular_stop_idx]
         encoded_linear = encoded[..., self._circular_stop_idx:]
         circular_outputs = torch.reshape(encoded_circular, (*encoded_circular.size()[:-1], -1, 2))
-        return torch.concatenate([torch.atan2(circular_outputs[..., 1], circular_outputs[..., 0]), torch.pi * torch.tanh(encoded_linear)], dim=-1)
+        return torch.concatenate([torch.atan2(circular_outputs[..., 1], circular_outputs[..., 0]), encoded_linear], dim=-1)
 
 
 class Encoder1D(nn.Module):

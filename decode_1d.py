@@ -32,7 +32,17 @@ def distance_costs(encoder, re_encoded_points, decoded_angles, integration_resam
 
     extra_length_cost = torch.mean((model_arclengths - euclid_dist) / euclid_dist)
     isometry_cost = torch.mean(torch.square(normed_angular_distance - normed_model_distance))
-    return extra_length_cost, isometry_cost
+
+    random_sample_phases = torch.tensor(np.random.uniform(-np.pi, np.pi, decoded_angles.shape),
+                                        dtype=decoded_angles.dtype).to(decoded_angles.device)
+    random_matches = encoder.closest_points_on_manifold(
+        random_sample_phases)[1]
+    random_arclengths = encoder.minimum_straight_line_distance(random_sample_phases, random_matches, n_points_integrate=integration_resamples)[1]
+    mean_in_dist_arc = torch.mean(model_arclengths)
+    mean_dist = torch.mean(random_arclengths)
+    extent_cost = torch.abs((mean_dist - mean_in_dist_arc)/mean_dist)
+
+    return extra_length_cost, isometry_cost, extent_cost
 
 
 def train(data, n_circular_dimensions, n_linear_dimensions, device, encoder_hidden_dim=1500, encoder_n_hidden=1, decoder_hidden_dim=1500,
@@ -58,12 +68,11 @@ def train(data, n_circular_dimensions, n_linear_dimensions, device, encoder_hidd
         data_samples = torch.tensor(samples, dtype=torch.get_default_dtype()).to(device)
         opt.zero_grad()
         decoded_angles, re_encoded_points, decoder_loss = decode_encode_cost(decoder_net, encoder_net, data_samples)
-        norm_loss, distance_cost = distance_costs(encoder_net, re_encoded_points, decoded_angles, integration_resamples)
-        distribution_cost = div_cost(decoded_angles, n_div_bins)
+        norm_loss, distance_cost, distribution_cost = distance_costs(encoder_net, re_encoded_points, decoded_angles, integration_resamples)
         random_sample_phases = torch.tensor(np.random.uniform(-np.pi, np.pi, decoded_angles.shape), dtype=decoded_angles.dtype)
         decoded_dists = torch.mean(encoder_net.closest_points_on_manifold(decoded_angles)[0])
         sampled_dists = torch.mean(encoder_net.closest_points_on_manifold(random_sample_phases)[0])
-        distribution_cost = torch.abs((sampled_dists - decoded_dists)/sampled_dists)
+        #distribution_cost = torch.abs((sampled_dists - decoded_dists)/sampled_dists)
         #distribution_cost = (torch.min(decoded_angles) - (-torch.pi))**2 + (torch.max(decoded_angles) - torch.pi)**2
         loss = (decoder_weight * decoder_loss) + distance_cost + (norm_loss * order_red_weight) + (div_weight * distribution_cost)
         loss.backward()
