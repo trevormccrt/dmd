@@ -21,15 +21,14 @@ class Decoder1D(nn.Module):
     def __init__(self, encoded_dimension, n_circular_dimensions, n_linear_dimensions, hidden_layer_dimension=1000, n_hidden_layers=1):
         super().__init__()
         self._circular_stop_idx = 2 * n_circular_dimensions
-        self.net = wide_n_deep(encoded_dimension, self._circular_stop_idx + n_linear_dimensions, n_hidden_layers, hidden_layer_dimension)
+        self.net = wide_n_deep(encoded_dimension, 2 * (n_circular_dimensions) + n_linear_dimensions, n_hidden_layers, hidden_layer_dimension)
 
     def forward(self, x):
         encoded = self.net(x)
-        circular_outputs = torch.reshape(encoded[..., :self._circular_stop_idx], (*encoded.size()[:-1], -1, 2))
-        circular_phases = torch.atan2(circular_outputs[..., 1], circular_outputs[..., 0])
-        linear_outputs = encoded[..., self._circular_stop_idx:]
-        linear_phases = (2 * torch.pi * torch.sigmoid(linear_outputs)) - torch.pi
-        return torch.concatenate([circular_phases, linear_phases], -1)
+        encoded_circular = encoded[..., :self._circular_stop_idx]
+        encoded_linear = encoded[..., self._circular_stop_idx:]
+        circular_outputs = torch.reshape(encoded_circular, (*encoded_circular.size()[:-1], -1, 2))
+        return torch.concatenate([torch.atan2(circular_outputs[..., 1], circular_outputs[..., 0]), torch.pi * torch.tanh(encoded_linear)], dim=-1)
 
 
 class Encoder1D(nn.Module):

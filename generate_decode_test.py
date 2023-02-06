@@ -39,7 +39,7 @@ def test_decode_circle():
     circle_points = geometry_util.angles_to_ring(circle_phases)
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     dec_encoder, dec_decoder, dec_costs = decode_1d.train(circle_points, 1, 0, device, n_training_iterations=2000,
-                                                          verbose=False, integration_resamples=30)
+                                                          verbose=True, integration_resamples=30)
     assert dec_costs[0] < 0.001
     assert dec_costs[1] < 0.001
 
@@ -63,14 +63,14 @@ def test_decode_circle():
 
 
 def test_decode_line():
-    np.random.seed(234235)
-    torch.manual_seed(1233144)
+    #np.random.seed(234235)
+    #torch.manual_seed(1233144)
     line_phases = np.linspace(start=-np.pi, stop=np.pi, num=200)
     line_points = np.zeros((len(line_phases), 2))
     line_points[:, 0] = line_phases
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-    dec_encoder, dec_decoder, dec_costs = decode_1d.train(line_points, 0, 1, device, n_training_iterations=1500,
-                                                          verbose=True, integration_resamples=30)
+    dec_encoder, dec_decoder, dec_costs = decode_1d.train(line_points, 0, 1, device, n_training_iterations=2500,
+                                                          verbose=True, integration_resamples=30, div_weight=0.1)
     assert dec_costs[0] < 0.001
     assert dec_costs[1] < 0.001
 
@@ -96,3 +96,6 @@ def test_decode_line():
     dist_error = np.mean(np.abs(ang_distances * scale_factor - arclength))
     assert dec_error < 0.05
     assert dist_error < 0.05
+
+
+test_decode_line()
