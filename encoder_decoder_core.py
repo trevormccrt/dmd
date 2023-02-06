@@ -21,7 +21,7 @@ class Decoder1D(nn.Module):
     def __init__(self, encoded_dimension, n_circular_dimensions, n_linear_dimensions, hidden_layer_dimension=1000, n_hidden_layers=1):
         super().__init__()
         self._circular_stop_idx = 2 * n_circular_dimensions
-        self.net = wide_n_deep(encoded_dimension, 2 * (n_circular_dimensions) + n_linear_dimensions, n_hidden_layers, hidden_layer_dimension)
+        self.net = wide_n_deep(encoded_dimension, self._circular_stop_idx + n_linear_dimensions, n_hidden_layers, hidden_layer_dimension)
 
     def forward(self, x):
         encoded = self.net(x)
