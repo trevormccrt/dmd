@@ -74,7 +74,7 @@ def train(data, n_circular_dimensions, n_linear_dimensions, device, encoder_hidd
                                    distance_cost.cpu().detach().numpy(),
                                    norm_loss.cpu().detach().numpy()])
             if verbose:
-                print("iteration: {}, decoding loss: {}, distance cost: {}, order reduction: {}, kl: {}".format(i, decoder_loss, distance_cost, norm_loss, distribution_cost))
+                print("iteration: {}, decoding loss: {}, distance cost: {}, order reduction: {}, extent: {}".format(i, decoder_loss, distance_cost, norm_loss, distribution_cost))
 
         if loss < loss_stop_thresh:
             break
